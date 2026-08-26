@@ -1,0 +1,30 @@
+{
+  "title": "Regression Analysis: Prediction, Foundations, and Inference",
+  "upload_type": "publication",
+  "publication_type": "book",
+  "access_right": "open",
+  "license": "cc-by-4.0",
+  "version": "0.9",
+  "creators": [
+    {
+      "name": "Diamond, Alexis"
+    }
+  ],
+  "description": "<p>A six-chapter introduction to regression analysis built around one central idea: <em>regression is a prediction machine.</em> The book develops conditional expectations, OLS foundations, coefficient and prediction uncertainty, functional form, interpolation and extrapolation, and the connection between regression, overlap, and causal inference, with worked examples in base R throughout. A companion R notebook mirrors the book chapter by chapter so every result can be reproduced.</p><p>Text and figures are licensed CC BY 4.0; all code is licensed MIT.</p>",
+  "keywords": [
+    "regression",
+    "statistics",
+    "prediction",
+    "causal inference",
+    "ordinary least squares",
+    "R",
+    "textbook"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/alexisjdiamond/regression-analysis-book",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}
