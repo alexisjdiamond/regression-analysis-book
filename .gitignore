@@ -1,0 +1,28 @@
+# LaTeX intermediates
+*.aux
+*.log
+*.toc
+*.idx
+*.ind
+*.ilg
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# The compiled PDF lives in docs/ (served by GitHub Pages) and in Releases;
+# the copy in the repo root is a build intermediate.
+/regression_analysis_complete_final.pdf
+
+# R intermediates
+.Rhistory
+.RData
+.Rproj.user/
+regression_companion_body.R
+regression_companion_files/
+# Root-level knit output is an intermediate; the docs/ copy is served by Pages.
+/regression_companion.html
+
+# OS noise
+.DS_Store
+Thumbs.db
