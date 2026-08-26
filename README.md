@@ -5,8 +5,6 @@
 
 A six-chapter introduction to regression analysis built around one central idea: *regression is a prediction machine.* The book develops conditional expectations, OLS foundations, coefficient and prediction uncertainty, functional form, interpolation and extrapolation, and the connection between regression, overlap, and causal inference — with worked examples in base R throughout. A companion R notebook mirrors the book chapter by chapter so every result can be reproduced.
 
-> **Note:** After creating your GitHub repository, replace `alexisjdiamond` and `regression-analysis-book` in the links below with your actual GitHub username and repository name (see `SETUP.md`).
-
 ## Downloads
 
 | What | Link |
