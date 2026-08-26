@@ -1,0 +1,41 @@
+cff-version: 1.2.0
+message: "If you use this book, please cite the specific version you used, as below."
+title: "Regression Analysis: Prediction, Foundations, and Inference"
+abstract: >-
+  A six-chapter introduction to regression analysis built around one central
+  idea: regression is a prediction machine. The book develops conditional
+  expectations, OLS foundations, coefficient and prediction uncertainty,
+  functional form, interpolation and extrapolation, and the connection between
+  regression, overlap, and causal inference, with worked examples in base R
+  throughout. A companion R notebook mirrors the book chapter by chapter so
+  every result can be reproduced.
+authors:
+  - family-names: Diamond
+    given-names: Alexis
+version: "0.9"
+date-released: "2026-08-26"
+url: "https://alexisjdiamond.github.io/regression-analysis-book/"
+repository-code: "https://github.com/alexisjdiamond/regression-analysis-book"
+license:
+  - CC-BY-4.0
+  - MIT
+keywords:
+  - regression
+  - statistics
+  - prediction
+  - causal inference
+  - ordinary least squares
+  - R
+  - textbook
+# The repository is the container; the book is the thing to cite. GitHub's
+# "Cite this repository" button and most CFF tools prefer this block.
+preferred-citation:
+  type: book
+  title: "Regression Analysis: Prediction, Foundations, and Inference"
+  authors:
+    - family-names: Diamond
+      given-names: Alexis
+  version: "0.9"
+  year: 2026
+  month: 8
+  url: "https://github.com/alexisjdiamond/regression-analysis-book/releases/tag/v0.9"

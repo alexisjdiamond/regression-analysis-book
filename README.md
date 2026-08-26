@@ -57,4 +57,21 @@ Spotted a typo, a broken cross-reference, or a numerical result that doesn't rep
 
 ## Citation
 
-> Diamond, A. (2026). *Regression Analysis: Prediction, Foundations, and Inference* (Version 0.9). https://github.com/alexisjdiamond/regression-analysis-book
+Please cite the **specific version** you used. Each release is frozen and will never change; the copy served from the landing page is rebuilt from source on every update, so it is not a stable citation target.
+
+> Diamond, A. (2026). *Regression Analysis: Prediction, Foundations, and Inference* (Version 0.9) [Book]. https://github.com/alexisjdiamond/regression-analysis-book/releases/tag/v0.9
+
+BibLaTeX:
+
+```bibtex
+@book{diamond2026regression,
+  author  = {Diamond, Alexis},
+  title   = {Regression Analysis: Prediction, Foundations, and Inference},
+  version = {0.9},
+  year    = {2026},
+  month   = {8},
+  url     = {https://github.com/alexisjdiamond/regression-analysis-book/releases/tag/v0.9}
+}
+```
+
+This repository includes a [`CITATION.cff`](CITATION.cff), so GitHub's **Cite this repository** button (top right of the repo page) will generate APA and BibTeX for you automatically.
