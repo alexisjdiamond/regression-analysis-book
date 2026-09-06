@@ -972,6 +972,43 @@ Each prediction error is squared, the squared errors are added, and the total is
 
 Here ``MSE'' means the average squared \emph{prediction error} using divisor \(n\). This is the quantity useful for the \(R^2\) interpretation below. It should not be confused with the residual mean square sometimes used to estimate \(\sigma^2\), which uses residual degrees of freedom rather than \(n\).
 
+\section{Reducible and Irreducible Error}
+\index{irreducible error}\index{reducible error}\index{data-generating process}\index{signal and noise}
+
+Mean squared error tells us how far our predictions fall from the outcomes. It does not tell us \emph{why} they fall short. Some of the shortfall is our own doing and could be removed by a better model. Some of it could not be removed by any model at all. Separating these two sources is one of the most clarifying ideas in statistical learning, and it comes with standard nomenclature worth adopting.
+
+Begin by writing the data-generating process in the form
+\[
+Y=f(X)+\varepsilon .
+\]
+It is important to see that this is a \emph{decomposition}, not an extra assumption. Define \(f(X)=\E[Y\mid X]\), which is simply the conditional expectation function from Chapter~\ref{chap:intro}, and define \(\varepsilon=Y-f(X)\) as whatever is left over. Written this way the equation is true by construction, and so is the property
+\[
+\E[\varepsilon\mid X]=0 ,
+\]
+because the average of \(Y\) around its own conditional average is zero. The systematic part \(f\) is often called the \emph{signal}, and \(\varepsilon\) the \emph{noise} or the \emph{disturbance}. Assumptions enter only when we say something further about \(\varepsilon\) --- that its variance is constant, say, or that it is normally distributed. Those are claims about the world. The decomposition itself is free.
+
+Now suppose we have estimated some prediction function \(\widehat{f}\) from a training sample, and we use it to predict a new observation drawn at \(X=x\). The expected squared error of that prediction splits into two pieces:
+\[
+\underbrace{\E\big[(Y-\widehat{Y})^2 \,\big|\, X=x\big]}_{\text{expected squared prediction error}}
+=
+\underbrace{\big[f(x)-\widehat{f}(x)\big]^2}_{\text{reducible}}
+\;+\;
+\underbrace{\Var(\varepsilon\mid X=x)}_{\text{irreducible}} .
+\]
+The cross term vanishes precisely because \(\E[\varepsilon\mid X]=0\), so nothing has been assumed away to obtain this.
+
+The two pieces have very different characters, and the names are the standard ones.
+
+The first is the \emph{reducible error}. It measures how badly \(\widehat{f}\) approximates \(f\), and it is our responsibility. It can be reduced by choosing a better functional form, by including predictors that belong in the model, by collecting more data so the estimate is less noisy, or by using a more flexible method where flexibility is warranted. In principle it can be driven toward zero. Most of what statisticians and data scientists actually do is an attempt to shrink this term.
+
+The second is the \emph{irreducible error}. It is the variability of \(Y\) among units that share the same value of \(X\), and no amount of modeling skill can remove it, because it is not a function of \(X\) at all. Even an analyst handed the true \(f\) --- perfect knowledge of the conditional expectation function --- would still make prediction errors of this size. Recall the five outcomes from Chapter~\ref{chap:intro}, \(7,\,9,\,10,\,11,\,13\), all sharing the same value of \(X\). Their spread around \(10\) is exactly this quantity. Knowing \(X\) more precisely does not help; every one of these units already has the same \(X\).
+
+Where does irreducible error come from? Typically from three sources: variables that genuinely affect \(Y\) but are not contained in \(X\), including variables nobody has measured or could measure; inherent randomness in the outcome itself; and measurement error in \(Y\). All three produce variation that the predictors are simply unable to speak to.
+
+One qualification matters, and it is easy to miss. Irreducible error is irreducible \emph{given a particular set of predictors}. It is a property of the pair \((Y,X)\), not of \(Y\) alone. If we go out and measure a new variable and add it to \(X\), we have changed the conditioning set: \(f\) becomes a different function, and variation that was formerly irreducible may become reducible. This is one reason that acquiring better predictors is often more valuable than fitting a cleverer model to the predictors already in hand. What cannot be done is to squeeze that variation out by modeling alone, once the predictor set is fixed.
+
+Finally, this decomposition explains something that will otherwise look strange in the next chapter. There we will meet two different intervals attached to a prediction. A confidence interval for the conditional mean describes uncertainty about where \(f\) lies, and that is reducible: it narrows as the sample grows, and shrinks toward zero width in the limit. A prediction interval for a single new observation must additionally absorb \(\Var(\varepsilon\mid X=x)\), and that term does not shrink at all. However much data we gather, the prediction interval retains a floor set by the irreducible error. That is the entire reason the two intervals differ in width, and why only one of them can be made arbitrarily narrow.
+
 \section{The Zero-Predictor Benchmark: Predict Everyone With the Mean}
 \index{mean-only model}
 
@@ -2187,6 +2224,65 @@ If we intervened and changed \(X\) by one unit for the same unit, \(Y\) would ch
 That second statement is causal and requires causal assumptions or a research design that justifies it.
 
 Adding more control variables does not mechanically turn an associational regression into a causal one. Some variables may need to be controlled for; some may not; some can even introduce bias if controlled for inappropriately. The causal role of variables has to come from substantive knowledge and design, not from the regression command itself.
+
+\section{What a Confidence Interval Still Means When a Confounder Is Omitted}
+\index{omitted variable bias}\index{population linear projection}\index{estimand}\index{confidence interval!coefficient}
+
+The previous section said that a coefficient is not automatically a causal effect. It is worth working out what happens to the \emph{confidence interval} in that situation, because the answer is more interesting than simply declaring the analysis broken.
+
+Suppose the outcome is generated as
+\[
+Y=\alpha_0+\alpha_1X+\alpha_2Z+u,
+\qquad
+\E[u\mid X,Z]=0,
+\]
+and suppose that, under a design or set of assumptions we are willing to defend, \(\alpha_1\) is the causal effect of \(X\). Now suppose we do not have \(Z\). Perhaps it was never measured. We fit the short regression
+\[
+Y=\beta_0+\beta_1X+\varepsilon
+\]
+and R obligingly reports \(\widehat{\beta}_1\), a standard error, and a \(95\%\) confidence interval.
+
+Standard algebra tells us what \(\beta_1\) actually is. Let \(\delta_1\) be the slope from the population regression of \(Z\) on \(X\). Then
+\[
+\beta_1=\alpha_1+\alpha_2\delta_1 .
+\]
+The second term is the classic \emph{omitted variable bias}. It is nonzero whenever \(Z\) both affects \(Y\) \((\alpha_2\neq 0)\) and is related to \(X\) \((\delta_1\neq 0)\) --- which is exactly what it means for \(Z\) to be a confounder. So \(\beta_1\neq\alpha_1\), and our estimator is not aimed at the causal effect.
+
+\subsection{The interval is not broken; it is aimed elsewhere}
+
+Here is the key point. The confidence interval is not malfunctioning. It is doing its job accurately --- for a different target than the one we may have had in mind.
+
+The quantity \(\beta_1\) is not a fiction, and it is not merely ``the biased version of \(\alpha_1\).'' It is a well-defined feature of the population in its own right: the slope of the best linear predictor of \(Y\) using \(X\) alone, sometimes called the \emph{population linear projection} of \(Y\) on \(X\). This object exists whether or not any linear model is ``true,'' because it is defined by a minimization --- the line that minimizes expected squared error in the population --- rather than by a claim about how the world works. OLS remains a consistent estimator of it under misspecification, and heteroskedasticity-robust standard errors deliver asymptotically valid inference for it.\footnote{This is why robust standard errors are the conventional default in this setting. Once we admit that the conditional mean is not literally linear, the homoskedastic textbook variance formula loses its justification, whereas the sandwich formula remains valid for the projection coefficient under mild conditions.} Under those conditions, the reported interval covers \(\beta_1\) about \(95\%\) of the time, exactly as advertised.
+
+And \(\beta_1\) often answers a question someone genuinely wants answered. In words, it says: among units that differ in \(X\) by one unit, how much does average \(Y\) differ, \emph{without} adjusting for \(Z\)? That is a real and frequently important quantity. Unadjusted differences in wages across groups, raw disparities in health outcomes, the predictive value of a variable that a decision-maker will actually observe in practice, a descriptive summary of an association, a forecasting rule --- all of these are legitimately about \(\beta_1\), not \(\alpha_1\). A hospital deciding whom to screen may care what an available predictor predicts, not what it causes. Reporting a confidence interval for such a quantity is honest and useful work.
+
+\subsection{As an interval for the causal effect, it is worse than useless}
+
+The same interval, relabeled as a statement about \(\alpha_1\), becomes actively misleading. Not merely uninformative --- misleading, and in a way that gets worse rather than better as the study improves.
+
+The reason is that a confidence interval quantifies \emph{sampling variability only}. It answers the question: how much would this estimate bounce around across repeated samples? It contains no information whatsoever about bias from an omitted confounder. Those are different failure modes, and the standard error is blind to the second one.
+
+The consequence is uncomfortable. As \(n\) grows, the interval's width shrinks toward zero, but the bias \(\alpha_2\delta_1\) does not shrink at all --- it is a feature of the population, not of the sample. So the interval closes in tightly around \(\beta_1\), a number that is not \(\alpha_1\). Its coverage of the causal effect therefore falls toward \emph{zero}: in a large enough sample, a nominal \(95\%\) interval will exclude the true causal effect essentially always. More data buys us more confident wrongness, reported with a smaller standard error and a more impressive \(p\)-value.
+
+The lesson is that precision is not accuracy. A narrow interval means the estimate is stable, not that it is correct. Nothing in the regression output distinguishes the two cases, because the arithmetic is identical either way. What changes is only the label the analyst attaches to the result.
+
+\subsection{Coefficients are indexed to a specification}
+
+The discipline this suggests is to stop speaking of ``the effect of \(X\)'' and start naming the estimand precisely. A regression coefficient is never simply a property of \(X\) and \(Y\). It is a property of a particular prediction rule, fitted to a particular set of variables, within a particular functional form. It is a coefficient of \emph{that} machine.
+
+Change any of those and the coefficient changes meaning, not merely value:
+
+\begin{itemize}[leftmargin=2em]
+\item Add \(Z\) to the regression and the estimand becomes the projection coefficient holding \(Z\) fixed --- a different population quantity, which is why coefficients move when predictors are added, as we saw earlier in this chapter.
+\item Add a quadratic term or an interaction and there may no longer be a single coefficient describing the relationship at all.
+\item Fit LOESS instead and there is no coefficient to report, though the conditional mean being estimated is the same object.
+\end{itemize}
+
+None of these is more correct in the abstract. Each targets a different estimand, and the analyst's obligation is to say which one is being reported.
+
+That obligation is what makes the difference between defensible and indefensible practice here, and the gap between them is entirely verbal. Writing ``\(95\%\) confidence interval for the unadjusted association between \(X\) and \(Y\)'' is accurate, useful, and the interval genuinely supports it. Writing ``\(95\%\) confidence interval for the effect of \(X\) on \(Y\)'' is not supported, and the numbers printed on the page are exactly the same in both cases. The statistics cannot tell these apart. Only the analyst can.
+
+This is also why the causal work in Chapter~\ref{chap:causal_bridge} is done by design --- randomization, overlap, and comparability --- rather than by tightening a confidence interval. Sampling uncertainty and identification are separate problems, and the confidence interval addresses only the first.
 
 \section{``Holding Fixed'' Can Also Require Extrapolation}
 
@@ -4040,6 +4136,8 @@ R^2
 \]
 An \(R^2\) of zero means the fitted predictors do no better in-sample than predicting the mean for everyone. An \(R^2\) of one means every training observation is predicted perfectly. Adding predictors cannot lower ordinary training-sample \(R^2\), because OLS can always set the new coefficients to zero and reproduce the old fit. This is one reason a larger training \(R^2\) is not by itself evidence of a better model for new data.
 
+Prediction error also decomposes into two parts with very different characters. Writing the data-generating process as \(Y=f(X)+\varepsilon\), with \(f(X)=E[Y\mid X]\) and \(\varepsilon=Y-f(X)\), the expected squared error of a prediction at \(X=x\) is \([f(x)-\widehat{f}(x)]^2+\Var(\varepsilon\mid X=x)\). The first term is \emph{reducible error}: it reflects how well the estimated prediction function approximates the conditional expectation function, and better functional form, more informative predictors, and more data can shrink it. The second is \emph{irreducible error}: the variability of \(Y\) among units sharing the same \(X\), which no model can remove because it is not a function of \(X\). Irreducible error is defined relative to a given predictor set, so measuring genuinely new predictors can convert some of it into reducible error, whereas modeling alone cannot. This decomposition is also why a prediction interval cannot be narrowed indefinitely: it must absorb the irreducible term, which does not shrink with sample size, while a confidence interval for the conditional mean does.
+
 Regression inference introduces several different uncertainty questions that must be named carefully. A confidence interval for a \emph{coefficient} describes uncertainty about a parameter such as \(\beta_1\). A confidence interval for a \emph{predicted conditional mean} describes uncertainty about where the regression line or regression surface lies at specified predictor values. A \emph{prediction interval} describes where a new individual outcome might lie. The last interval is ordinarily wider because it must include both uncertainty about the conditional mean and individual outcome variation around that mean.
 
 The phrase ``confidence interval'' is therefore ambiguous. Students and analysts should specify the target: confidence interval for the slope coefficient, confidence interval for the fitted mean at \(X=x\), or prediction interval for a new observation at \(X=x\).
@@ -4048,11 +4146,13 @@ Likewise, a p-value has a specific inferential meaning. Under a stated null hypo
 
 Confidence intervals and p-values achieve their nominal repeated-sampling properties only under the assumptions required by the inferential procedure. In textbook OLS, those assumptions concern the conditional mean specification and the error process; exact small-sample t procedures additionally invoke normality. Robust procedures can protect against some forms of misspecification, but no command can make inferential validity assumption-free. In most observational social-science problems, analysts do not know the true data-generating equation. Proper specification is therefore something to investigate and defend, not something to assume merely because software returned standard errors.
 
+A confidence interval can nevertheless remain useful when a model is known to be misspecified, provided its target is named honestly. If a confounder \(Z\) is omitted, the short-regression coefficient is \(\beta_1=\alpha_1+\alpha_2\delta_1\) rather than the causal effect \(\alpha_1\). The interval is not thereby broken: \(\beta_1\) is a well-defined population quantity---the coefficient of the population linear projection of \(Y\) on \(X\) alone---and OLS with robust standard errors supports valid inference about it. Reported as an unadjusted association, a descriptive summary, or the predictive value of an available variable, the interval does real work. Reported as a causal effect, it is worse than useless, because a confidence interval quantifies sampling variability only and is blind to bias from omitted confounders. As the sample grows the interval narrows while the bias does not, so its coverage of the causal effect falls toward zero: more data buys more confident wrongness. Precision is not accuracy, and the arithmetic is identical under either label. A coefficient is therefore always a property of a particular prediction rule fitted to a particular set of variables in a particular functional form---an estimand indexed to a specification---and never simply ``the effect of \(X\).''
+
 Functional form deserves the same caution. A linear model, quadratic model, cubic model, and flexible smoother can agree reasonably well where observations are plentiful and diverge where the data provide little guidance. Interpolation is generally safer than extrapolation, but ``inside the observed range'' is not synonymous with ``well supported.'' Interior gaps, sparse regions, and unusual combinations of multiple predictors can make an interpolation heavily dependent on modeling assumptions. Extrapolation goes further by extending the assumed shape beyond the region represented by the data. As nearby empirical support weakens, the functional form does more of the work. Conventional confidence or prediction intervals are usually conditional on the selected functional form and therefore do not automatically capture this model-form uncertainty.
 
 Finally, regression connects to causal inference because causal questions require predictions of missing potential outcomes. Those counterfactual predictions are most credible when treated and control units overlap on relevant pretreatment confounders, so the comparison is anchored by observed data rather than by functional-form extrapolation. Poor overlap increases model dependence: different reasonable specifications can imply different counterfactuals. Randomized experiments are powerful precisely because the assignment design makes treated and control groups comparable in expectation, allowing the basic causal contrast to be identified with little dependence on an outcome-regression specification. Regression can still improve precision, but good design reduces the causal work the model must do.
 
-The overall discipline of regression analysis is therefore to keep several questions separate: What is the prediction target? What loss function is being optimized? What functional form has been imposed? Where does the requested prediction lie relative to the training data? What kind of uncertainty interval is being reported? Which assumptions justify its coverage? And, if a causal interpretation is desired, what design or assumptions make the counterfactual prediction credible? Keeping those questions distinct prevents many of the most common conceptual mistakes in regression analysis.
+The overall discipline of regression analysis is therefore to keep several questions separate: What is the prediction target? What loss function is being optimized? What functional form has been imposed? Where does the requested prediction lie relative to the training data? What kind of uncertainty interval is being reported? Which estimand does that interval actually cover? Which assumptions justify its coverage? And, if a causal interpretation is desired, what design or assumptions make the counterfactual prediction credible? Keeping those questions distinct prevents many of the most common conceptual mistakes in regression analysis.
 
 
 
@@ -4077,6 +4177,8 @@ The overall discipline of regression analysis is therefore to keep several quest
 
 \item[Counterfactual] A potential outcome that was not observed because the unit experienced a different treatment or condition. Causal inference requires learning about such missing potential outcomes.\index{counterfactual}
 
+\item[Data-generating process (DGP)] The underlying process or probability distribution that produces the variables we observe. Writing \(Y=f(X)+\varepsilon\) with \(f(X)=E[Y\mid X]\) is a decomposition of the DGP that is true by construction; assumptions enter only through further claims about \(\varepsilon\).\index{data-generating process}
+
 \item[Expected value] The average, or center, of a distribution, written \(E[\,\cdot\,]\). Despite the everyday connotation of the word, an expected value is not the outcome we anticipate observing, and it need not be a value any individual could have: the expected value of a binary outcome is a probability strictly between zero and one, which no individual observation can equal.\index{expected value!meaning of the term}
 
 \item[Extrapolation] Prediction at predictor values or combinations lying outside the support of the training data. Such predictions can be highly sensitive to functional-form assumptions.\index{extrapolation}
@@ -4088,6 +4190,8 @@ The overall discipline of regression analysis is therefore to keep several quest
 \item[Interaction] A model term, such as \(X\times Z\), that allows the fitted relationship between one predictor and the outcome to depend on the value of another predictor.\index{interaction}
 
 \item[Interpolation] Prediction at a predictor value lying between observed regions or within the broad range of the training data. Interpolation is generally safer than extrapolation, but it can still be weakly supported when observations are sparse, when there is an interior gap, or when a multivariable predictor combination has little or no nearby data.\index{interpolation}
+
+\item[Irreducible error] The variability of \(Y\) among units sharing the same value of \(X\), equal to \(\Var(\varepsilon\mid X=x)\). No model can remove it, because it is not a function of \(X\). It is defined relative to a given predictor set: measuring additional predictors changes the conditioning set and can convert irreducible error into reducible error.\index{irreducible error}
 
 \item[LOESS] A flexible local regression smoother that estimates the conditional mean using nearby observations rather than one global parametric equation.\index{LOESS}
 
@@ -4105,9 +4209,13 @@ The overall discipline of regression analysis is therefore to keep several quest
 
 \item[Multiple regression] A regression containing more than one predictor. Coefficients describe changes in the fitted prediction conditional on the other included predictors.\index{multiple regression}
 
+\item[Omitted variable bias] The discrepancy between a short regression's coefficient and a causal parameter that arises when a confounder is excluded. If \(Y=\alpha_0+\alpha_1X+\alpha_2Z+u\) and \(Z\) is omitted, the short-regression coefficient is \(\beta_1=\alpha_1+\alpha_2\delta_1\), where \(\delta_1\) is the population slope of \(Z\) on \(X\). The bias term does not shrink with sample size.\index{omitted variable bias}
+
 \item[Ordinary least squares (OLS)] The regression fitting method that chooses coefficients to minimize the sum of squared residuals in the training sample.\index{ordinary least squares}\index{OLS}
 
 \item[p-value] Under a specified null hypothesis and testing assumptions, the probability of obtaining a test statistic at least as extreme as the observed one if the null were true. It is not the probability that the null is true.\index{p-value}
+
+\item[Population linear projection] The best linear predictor of \(Y\) from a given set of predictors, defined as the linear function minimizing expected squared error in the population. It exists whether or not the conditional mean is truly linear, and it is the estimand that OLS consistently estimates under misspecification. A coefficient is therefore always indexed to a specification, not a property of \(X\) and \(Y\) alone.\index{population linear projection}
 
 \item[Potential outcome] The outcome a unit would experience under a particular treatment or condition. Only one potential outcome is ordinarily observed for a unit, leaving the alternatives counterfactual.\index{potential outcome}
 
@@ -4118,6 +4226,8 @@ The overall discipline of regression analysis is therefore to keep several quest
 \item[\(R^2\)] The fraction of the mean-only model's in-sample squared prediction error eliminated by the fitted OLS model. With an intercept, it ranges from 0 to 1 in ordinary applications.\index{R-squared@$R^2$}
 
 \item[Randomized controlled trial (RCT)] An experiment in which treatment is assigned by a known random mechanism. Randomization makes treatment independent of pretreatment characteristics and potential outcomes in the assignment mechanism, providing a design-based foundation for causal comparison.\index{randomized controlled trial}
+
+\item[Reducible error] The component of expected squared prediction error attributable to the gap between the estimated prediction function and the true conditional expectation function, \([f(x)-\widehat{f}(x)]^2\). Better functional form, more informative predictors, and more data can shrink it.\index{reducible error}
 
 \item[Residual] The difference between an observed outcome and its fitted value, \(e_i=Y_i-\widehat{Y}_i\).\index{residual}
 

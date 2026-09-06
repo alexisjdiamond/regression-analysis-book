@@ -238,6 +238,42 @@ mse_mean_only
 mse_model
 1 - mse_model / mse_mean_only
 
+# ---- ch2-irreducible-error ----
+set.seed(7)
+
+# The true DGP: Y = f(X) + epsilon, with f known to us only in a simulation.
+f <- function(x) 2 + 0.8 * x
+sigma <- 2
+
+simulate_data <- function(n) {
+  x <- runif(n, 0, 10)
+  data.frame(x = x, y = f(x) + rnorm(n, sd = sigma))
+}
+
+# A large test set, used to measure out-of-sample prediction error.
+test <- simulate_data(5000)
+
+# The oracle: predict using the TRUE f. No model can beat this.
+oracle_mse <- mean((test$y - f(test$x))^2)
+
+# Fit on training samples of different sizes and score on the same test set.
+test_mse_at <- function(n) {
+  train <- simulate_data(n)
+  fit <- lm(y ~ x, data = train)
+  mean((test$y - predict(fit, newdata = test))^2)
+}
+
+round(
+  c(
+    irreducible = sigma^2,      # Var(epsilon): the floor
+    oracle      = oracle_mse,   # the true f, estimated on nothing
+    n_25        = test_mse_at(25),
+    n_250       = test_mse_at(250),
+    n_10000     = test_mse_at(10000)
+  ),
+  3
+)
+
 # ---- ch3-three-intervals ----
 fit <- lm(dist ~ speed, data = cars)
 
@@ -431,6 +467,39 @@ fit_interaction_centered <- lm(
   data = mtcars_for_example
 )
 summary(fit_interaction_centered)
+
+# ---- ch3-omitted-confounder-coverage ----
+set.seed(11)
+
+alpha1 <- 2.00   # the causal effect of x on y
+alpha2 <- 0.15   # the effect of the omitted confounder z on y
+
+one_study <- function(n) {
+  z <- rnorm(n)
+  x <- 0.7 * z + rnorm(n)                      # x and z are related
+  y <- 1 + alpha1 * x + alpha2 * z + rnorm(n)
+  fit <- lm(y ~ x)                             # z omitted
+  ci <- confint(fit)["x", ]
+  c(est = unname(coef(fit)["x"]),
+    lower = unname(ci[1]),
+    upper = unname(ci[2]))
+}
+
+# What the short regression actually targets: beta1 = alpha1 + alpha2 * delta1,
+# where delta1 is the population slope of z on x.
+delta1 <- 0.7 / (0.7^2 + 1)
+beta1 <- alpha1 + alpha2 * delta1
+beta1
+
+coverage <- function(n, reps = 2000) {
+  out <- replicate(reps, one_study(n))
+  c(n                 = n,
+    mean_estimate     = mean(out["est", ]),
+    covers_causal     = mean(out["lower", ] <= alpha1 & out["upper", ] >= alpha1),
+    covers_projection = mean(out["lower", ] <= beta1  & out["upper", ] >= beta1))
+}
+
+round(rbind(coverage(100), coverage(1000), coverage(10000)), 4)
 
 # ---- ch4-functional-form ----
 set.seed(9)

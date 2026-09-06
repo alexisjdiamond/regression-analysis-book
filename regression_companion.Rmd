@@ -302,6 +302,52 @@ mse_model
 1 - mse_model / mse_mean_only
 ```
 
+## Reducible and irreducible error
+
+Here we know the data-generating process, so we can measure the floor that no
+model can get under. Reducible error shrinks as the training sample grows;
+irreducible error does not move at all.
+
+```{r ch2-irreducible-error}
+set.seed(7)
+
+# The true DGP: Y = f(X) + epsilon, with f known to us only in a simulation.
+f <- function(x) 2 + 0.8 * x
+sigma <- 2
+
+simulate_data <- function(n) {
+  x <- runif(n, 0, 10)
+  data.frame(x = x, y = f(x) + rnorm(n, sd = sigma))
+}
+
+# A large test set, used to measure out-of-sample prediction error.
+test <- simulate_data(5000)
+
+# The oracle: predict using the TRUE f. No model can beat this.
+oracle_mse <- mean((test$y - f(test$x))^2)
+
+# Fit on training samples of different sizes and score on the same test set.
+test_mse_at <- function(n) {
+  train <- simulate_data(n)
+  fit <- lm(y ~ x, data = train)
+  mean((test$y - predict(fit, newdata = test))^2)
+}
+
+round(
+  c(
+    irreducible = sigma^2,      # Var(epsilon): the floor
+    oracle      = oracle_mse,   # the true f, estimated on nothing
+    n_25        = test_mse_at(25),
+    n_250       = test_mse_at(250),
+    n_10000     = test_mse_at(10000)
+  ),
+  3
+)
+```
+
+The fitted models approach the oracle as `n` grows -- that closing gap is the
+reducible error. What none of them get below is `sigma^2`.
+
 # Chapter 3: Prediction Uncertainty and Multiple Regression
 
 ## Three different interval targets
@@ -516,6 +562,51 @@ fit_interaction_centered <- lm(
 )
 summary(fit_interaction_centered)
 ```
+
+## A confidence interval when a confounder is omitted
+
+The short regression omits the confounder `z`. Its confidence interval is still
+a valid 95% interval -- for the projection coefficient `beta1`, not for the
+causal effect `alpha1`. Watch what happens to each coverage rate as `n` grows.
+
+```{r ch3-omitted-confounder-coverage}
+set.seed(11)
+
+alpha1 <- 2.00   # the causal effect of x on y
+alpha2 <- 0.15   # the effect of the omitted confounder z on y
+
+one_study <- function(n) {
+  z <- rnorm(n)
+  x <- 0.7 * z + rnorm(n)                      # x and z are related
+  y <- 1 + alpha1 * x + alpha2 * z + rnorm(n)
+  fit <- lm(y ~ x)                             # z omitted
+  ci <- confint(fit)["x", ]
+  c(est = unname(coef(fit)["x"]),
+    lower = unname(ci[1]),
+    upper = unname(ci[2]))
+}
+
+# What the short regression actually targets: beta1 = alpha1 + alpha2 * delta1,
+# where delta1 is the population slope of z on x.
+delta1 <- 0.7 / (0.7^2 + 1)
+beta1 <- alpha1 + alpha2 * delta1
+beta1
+
+coverage <- function(n, reps = 2000) {
+  out <- replicate(reps, one_study(n))
+  c(n                 = n,
+    mean_estimate     = mean(out["est", ]),
+    covers_causal     = mean(out["lower", ] <= alpha1 & out["upper", ] >= alpha1),
+    covers_projection = mean(out["lower", ] <= beta1  & out["upper", ] >= beta1))
+}
+
+round(rbind(coverage(100), coverage(1000), coverage(10000)), 4)
+```
+
+Coverage of `beta1` sits at the advertised 95% at every sample size. Coverage of
+`alpha1` falls toward zero, because the interval narrows while the bias does
+not. The estimates are not getting worse -- they are converging, precisely, on
+the wrong quantity.
 
 # Chapter 4: Functional Form, Interactions, Interpolation, and Extrapolation
 
