@@ -159,6 +159,24 @@ summary(fit_logit)
 summary(fit_pois)
 ```
 
+## Zeros in a count regression
+
+An observed count can be zero. A fitted Poisson mean never is.
+
+```{r ch1-count-zeros}
+# Zeros are ordinary observations in count data:
+sum(dat_count$count == 0)
+min(dat_count$count)
+
+# But no fitted value is ever zero, because lambda = exp(X %*% beta) > 0 always:
+lambda_hat <- fitted(fit_pois)
+min(lambda_hat)
+
+# The model never predicts zero; it assigns zero a probability.
+# At the smallest fitted mean, P(Y = 0) = exp(-lambda):
+exp(-min(lambda_hat))
+```
+
 # Chapter 2: Technical Foundations of OLS
 
 ## Binary predictor: coefficient equals the difference in means

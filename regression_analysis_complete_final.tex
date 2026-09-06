@@ -283,13 +283,13 @@ If the resulting fitted probability is \(0.73\), the model is predicting a \(73\
 Ordinary linear regression can also be used with a binary dependent variable, producing a \emph{linear probability model}. That model is sometimes useful, but it can generate fitted values below zero or above one. Logistic regression is constructed so that predicted probabilities remain between zero and one.
 
 \subsection{Count outcomes: Poisson and negative binomial regression}
-\index{Poisson regression}\index{negative binomial regression}
+\index{Poisson regression}\index{negative binomial regression}\index{count outcomes!zeros in}\index{zero-inflated models}
 
 Suppose the outcome is a count: the number of doctor visits, automobile accidents, patents filed, crimes in a neighborhood, or conflicts occurring in a year. Such outcomes normally take values
 \[
 0,1,2,3,\ldots
 \]
-and cannot be negative.
+and cannot be negative. Zero is an ordinary value here, not a special case: many people make no doctor visits in a year, and many neighborhoods record no crimes.
 
 A Poisson regression commonly models
 \[
@@ -301,7 +301,13 @@ with
 \[
 \log(\lambda_i)=X_i\beta.
 \]
-The logarithmic link ensures that the predicted expected count remains positive. When count data vary substantially more than the simple Poisson model allows, a negative binomial regression may be more appropriate.
+The logarithmic link ensures that the predicted expected count remains positive. Because \(\lambda_i=\exp(X_i\beta)\) and the exponential function is never zero, every fitted value is strictly greater than zero, however small it may be.
+
+That deserves a moment's attention, because two statements just made sound contradictory. The outcome \(Y_i\) can equal zero. The fitted value \(\lambda_i\) cannot. There is no contradiction, because these are different quantities. As explained earlier in this chapter, \(\lambda_i\) is a conditional mean, and a conditional mean need not be a value the outcome can actually take. A fitted \(\lambda_i\) of \(0.3\) does not predict that someone will make three-tenths of a doctor visit. It says that among people with these predictor values, the average is about a third of a visit per year --- most of them make none, and a few make one or more. The model assigns zero a probability, namely \(e^{-\lambda_i}\), which for \(\lambda_i=0.3\) is about \(0.74\); what it never does is predict a mean of exactly zero.
+
+This also explains where the logarithm belongs. It is applied to the mean, not to the outcome. A natural first instinct is to regress \(\log(Y_i)\) on \(X_i\) directly, but \(\log(0)\) is undefined, so that approach breaks on exactly the observations that are most common in many count datasets. Discarding those observations, or adding a small constant to make the logarithm defined, changes the question being asked. Poisson regression sidesteps the problem by placing the link on \(\lambda_i\), which is always positive, and leaving the zeros in the data untouched.
+
+When count data vary substantially more than the simple Poisson model allows, a negative binomial regression may be more appropriate. A common reason for that excess variability is an abundance of zeros: if a dataset contains many more zeros than a Poisson model with the fitted \(\lambda_i\) would produce, the model is misspecified, and specialized zero-inflated models exist for that situation.
 
 \subsection{Other kinds of outcomes}
 

@@ -573,6 +573,23 @@ summary(fit_ols)</code></pre>
 ## 
 ## Number of Fisher Scoring iterations: 5</code></pre>
 </div>
+<div id="zeros-in-a-count-regression" class="section level2">
+<h2>Zeros in a count regression</h2>
+<p>An observed count can be zero. A fitted Poisson mean never is.</p>
+<pre class="r"><code># Zeros are ordinary observations in count data:
+sum(dat_count$count == 0)</code></pre>
+<pre><code>## [1] 13</code></pre>
+<pre class="r"><code>min(dat_count$count)</code></pre>
+<pre><code>## [1] 0</code></pre>
+<pre class="r"><code># But no fitted value is ever zero, because lambda = exp(X %*% beta) &gt; 0 always:
+lambda_hat &lt;- fitted(fit_pois)
+min(lambda_hat)</code></pre>
+<pre><code>## [1] 1.525057</code></pre>
+<pre class="r"><code># The model never predicts zero; it assigns zero a probability.
+# At the smallest fitted mean, P(Y = 0) = exp(-lambda):
+exp(-min(lambda_hat))</code></pre>
+<pre><code>## [1] 0.2176087</code></pre>
+</div>
 </div>
 <div id="chapter-2-technical-foundations-of-ols" class="section level1">
 <h1>Chapter 2: Technical Foundations of OLS</h1>

@@ -116,6 +116,19 @@ summary(fit_ols)
 summary(fit_logit)
 summary(fit_pois)
 
+# ---- ch1-count-zeros ----
+# Zeros are ordinary observations in count data:
+sum(dat_count$count == 0)
+min(dat_count$count)
+
+# But no fitted value is ever zero, because lambda = exp(X %*% beta) > 0 always:
+lambda_hat <- fitted(fit_pois)
+min(lambda_hat)
+
+# The model never predicts zero; it assigns zero a probability.
+# At the smallest fitted mean, P(Y = 0) = exp(-lambda):
+exp(-min(lambda_hat))
+
 # ---- ch2-binary-difference-means ----
 D <- c(rep(0, 5), rep(1, 5))
 Y <- c(4, 5, 6, 7, 8,
