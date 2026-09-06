@@ -141,6 +141,23 @@ The regression uses the information contained in that collection of variables to
 
 The word \emph{conditional} therefore does a great deal of work. A regression prediction is not simply a statement about what value of \(Y\) is common in the population. It is a statement about what value of \(Y\) we should expect \emph{given particular information}.
 
+\subsection{A warning about the word ``expect''}
+\index{expected value!meaning of the term}\index{expected value!need not be observable}
+
+The word \emph{expect} is doing a great deal of work too, and it is worth pausing on, because in this book it is a technical term that does not carry its everyday meaning.
+
+In ordinary speech, to say that we expect something is to say that we anticipate it happening --- that it is the outcome we would bet on actually observing. That is not what \(\E[\,\cdot\,]\) means. An expected value is an \emph{average}, and nothing more. It is the center of a distribution. There is no promise anywhere in the mathematics that this center is a value any individual could ever have.
+
+Recall the five outcomes above, \(7,\,9,\,10,\,11,\,13\), whose average is \(10\). There the expected value happened to be a value we might also observe. Change a single number, so that the outcomes are \(7,\,9,\,10,\,11,\,14\), and the average becomes \(10.2\). If \(Y\) is a count --- children in a household, prior hospital visits, questions answered correctly on a ten-item quiz --- then \(10.2\) is not an outcome that anyone can have. It is still the correct answer to the question we asked.
+
+The point is sharpest when \(Y\) is binary. Let \(Y=1\) if a person is employed and \(Y=0\) otherwise, and suppose that among people with a particular value of \(X\), eighty percent are employed. Then
+\[
+\E[Y\mid X=x]=0.8 .
+\]
+Nobody in this population has \(Y=0.8\). Every single person has \(Y=0\) or \(Y=1\), and \(0.8\) is not merely unobserved but impossible. The conditional expectation is nonetheless exactly the quantity we want: when \(Y\) is binary, \(\E[Y\mid X=x]\) is the \emph{probability} of employment among people with that value of \(X\). We return to this connection when we discuss logistic regression later in this chapter.
+
+So a conditional expectation should be read as a statement about the population, not a forecast about any one person. ``The expected income of someone with sixteen years of education is \$62{,}000'' does not predict that the next such person we meet will earn \$62{,}000; almost certainly they will not. It says that \$62{,}000 is the center of the income distribution among such people, and therefore that it is our best single guess --- best in a specific sense that Chapter~\ref{chap:foundations} makes precise, where we show that the mean is the constant prediction minimizing squared error, and that the same logic applied within groups makes each group's conditional mean the best squared-error prediction for that group. A good prediction, in this sense, is not one that comes true. It is one that is wrong by as little as possible, on average, across everyone it is applied to.
+
 \subsection{Seeing conditional means in base R}
 
 The following small example makes the idea concrete. Here \(X\) takes only four values, so we can directly calculate the observed mean of \(Y\) at each value of \(X\).
@@ -4053,6 +4070,8 @@ The overall discipline of regression analysis is therefore to keep several quest
 \item[Confidence interval for a predicted mean] An interval describing uncertainty about the conditional mean \(E[Y\mid X=x]\), or equivalently about where the fitted regression line or surface lies at specified predictor values.\index{confidence interval!predicted mean}
 
 \item[Counterfactual] A potential outcome that was not observed because the unit experienced a different treatment or condition. Causal inference requires learning about such missing potential outcomes.\index{counterfactual}
+
+\item[Expected value] The average, or center, of a distribution, written \(E[\,\cdot\,]\). Despite the everyday connotation of the word, an expected value is not the outcome we anticipate observing, and it need not be a value any individual could have: the expected value of a binary outcome is a probability strictly between zero and one, which no individual observation can equal.\index{expected value!meaning of the term}
 
 \item[Extrapolation] Prediction at predictor values or combinations lying outside the support of the training data. Such predictions can be highly sensitive to functional-form assumptions.\index{extrapolation}
 

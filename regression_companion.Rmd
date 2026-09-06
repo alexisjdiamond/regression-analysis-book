@@ -26,6 +26,8 @@ knitr::opts_chunk$set(
 
 The empirical conditional means show what it means to ask for the expected value of `Y` at each observed value of `X`. The fitted line is one rule for generating predictions.
 
+Read "expected value" as *average*, not as the value we anticipate seeing. The two chunks below make that distinction concrete.
+
 ```{r ch1-conditional-means}
 x <- rep(c(1, 2, 3, 4), each = 5)
 y <- c(3, 4, 4, 5, 4,
@@ -49,6 +51,29 @@ plot(
 )
 abline(fit, lwd = 2)
 ```
+
+## An expected value need not be observable
+
+The word *expect* is a technical term here. An expected value is the center of a
+distribution, and the center is often a value that no individual could ever have.
+
+```{r ch1-expectation-not-observable}
+# A binary outcome: 1 = employed, 0 = not employed.
+employed <- c(1, 1, 1, 1, 0, 1, 1, 1, 0, 1)
+
+mean(employed)   # 0.8
+
+# Every person is a 0 or a 1, so no one has the value 0.8:
+sort(unique(employed))
+
+# For a binary Y the conditional mean IS the probability that Y = 1.
+# A count outcome makes the same point:
+visits <- c(7, 9, 10, 11, 14)
+mean(visits)     # 10.2 -- not a possible number of visits
+```
+
+The conditional mean is still the right prediction in both cases. It is the best
+single guess about the group, not a forecast of any one person's outcome.
 
 ## Linear regression and LOESS
 

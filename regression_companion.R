@@ -28,6 +28,20 @@ plot(
 )
 abline(fit, lwd = 2)
 
+# ---- ch1-expectation-not-observable ----
+# A binary outcome: 1 = employed, 0 = not employed.
+employed <- c(1, 1, 1, 1, 0, 1, 1, 1, 0, 1)
+
+mean(employed)   # 0.8
+
+# Every person is a 0 or a 1, so no one has the value 0.8:
+sort(unique(employed))
+
+# For a binary Y the conditional mean IS the probability that Y = 1.
+# A count outcome makes the same point:
+visits <- c(7, 9, 10, 11, 14)
+mean(visits)     # 10.2 -- not a possible number of visits
+
 # ---- ch1-linear-loess ----
 set.seed(123)
 
