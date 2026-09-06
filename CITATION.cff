@@ -12,6 +12,7 @@ abstract: >-
 authors:
   - family-names: Diamond
     given-names: Alexis
+    affiliation: "Minerva University"
 version: "0.9"
 date-released: "2026-08-26"
 url: "https://alexisjdiamond.github.io/regression-analysis-book/"
@@ -35,6 +36,7 @@ preferred-citation:
   authors:
     - family-names: Diamond
       given-names: Alexis
+      affiliation: "Minerva University"
   version: "0.9"
   year: 2026
   month: 8
