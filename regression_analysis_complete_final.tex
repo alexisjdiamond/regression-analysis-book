@@ -1745,6 +1745,139 @@ If the answer is ``the location of the regression line at this \(X\),'' you want
 
 If the answer is ``the outcome of one new unit,'' you want a prediction interval.
 
+\section{A Coefficient's Confidence Interval Does Not Give a Predicted Value's Confidence Interval}
+\index{variance-covariance matrix}\index{first difference}\index{confidence interval!predicted mean}\index{correlated coefficient estimates}
+
+The previous section asked all three questions separately, using \texttt{confint()} for the coefficients and \texttt{predict()} for the fitted mean. A natural thought is that the second request is unnecessary --- that we could construct the interval for a predicted value ourselves out of the interval for the slope, by taking a \emph{first difference}: move \(\widehat{\beta}_1\) to each end of its confidence interval, multiply by \(x\), and read off the resulting range of predictions.
+
+This does not work. It is worth seeing exactly why, because the reason is not a technicality: it is the single most important structural fact about estimated regression coefficients, namely that they are \emph{not} estimated independently of one another.
+
+\subsection{The formula that connects the two kinds of uncertainty}
+
+The fitted value at \(X=x\) is a linear combination of the estimated coefficients:
+\[
+\widehat{Y}(x)=\widehat{\beta}_0+\widehat{\beta}_1 x .
+\]
+The variance of any such combination is given by a standard result:\footnote{The object doing the work here is the \emph{variance-covariance matrix} of the estimated coefficients, written \(\widehat{\Var}(\widehat{\beta})\) and returned in R by \texttt{vcov(fit)}. It is a square, symmetric table with one row and one column per coefficient. Its diagonal entries are the variances of the individual estimates --- the squares of the standard errors printed in the regression output --- and its off-diagonal entries are the covariances between pairs of estimates. For any fixed vector \(c\), the estimator \(c'\widehat{\beta}\) has variance \(c'\,\widehat{\Var}(\widehat{\beta})\,c\). In OLS the matrix takes the familiar form \(\widehat{\sigma}^2(X'X)^{-1}\). This formula is the bridge between the two kinds of uncertainty in this chapter: uncertainty about a \emph{predicted value} is a function of uncertainty about the \emph{coefficients}, but it depends on the entire matrix, not on any single entry of it. That is precisely why a naive first difference built from one coefficient's standard error or confidence interval cannot recover it. The standard error printed next to \(\widehat{\beta}_1\) is one diagonal entry; the calculation needs the others too.}
+\[
+\Var\big(\widehat{Y}(x)\big)
+=
+\Var(\widehat{\beta}_0)
++
+x^2\,\Var(\widehat{\beta}_1)
++
+2x\,\operatorname{Cov}(\widehat{\beta}_0,\widehat{\beta}_1).
+\]
+The naive first-difference procedure uses only the middle term. It discards the uncertainty in the intercept entirely, and --- more damagingly --- it discards the covariance between the two estimates.
+
+That covariance is not a small correction. For simple OLS with an intercept,
+\[
+\operatorname{Cov}(\widehat{\beta}_0,\widehat{\beta}_1)
+=
+-\,\overline{x}\,\Var(\widehat{\beta}_1),
+\]
+which is zero only in the special case \(\overline{x}=0\). The intuition is geometric, and worth carrying around: the fitted line always passes through the point \((\overline{x},\overline{y})\). It pivots about that point. So if a particular sample produces a slope estimate that is too steep, the intercept estimate must come down to compensate, or the line would no longer pass through the sample's center of mass. The two estimation errors are yoked together. When \(\overline{x}>0\), as it is for most predictors measured on a positive scale, they are \emph{negatively} correlated, often very strongly.
+
+\subsection{An empirical example: the \texttt{cars} data with an intercept}
+
+\begin{lstlisting}
+fit <- lm(dist ~ speed, data = cars)
+
+# The variance-covariance matrix of the estimated coefficients.
+vcov(fit)
+
+# The off-diagonal entry is large and negative. As a correlation:
+cov2cor(vcov(fit))
+
+# It equals -xbar * Var(beta1hat):
+-mean(cars$speed) * vcov(fit)["speed", "speed"]
+
+# The CORRECT interval for the conditional mean at speed = 15
+predict(fit, newdata = data.frame(speed = 15), interval = "confidence")
+
+# The NAIVE interval: hold the intercept at its estimate and swing
+# the slope across the two ends of its confidence interval.
+coef(fit)[1] + confint(fit)["speed", ] * 15
+\end{lstlisting}
+
+The estimated coefficients are \(\widehat{\beta}_0=-17.58\) and \(\widehat{\beta}_1=3.93\), and the variance-covariance matrix is
+\[
+\begin{pmatrix}
+45.677 & -2.659\\
+-2.659 & \phantom{-}0.173
+\end{pmatrix},
+\]
+corresponding to a correlation between the two estimates of \(-0.947\). These estimates are very nearly redundant with one another, and the mean speed of \(15.4\) is exactly the multiplier that produces the off-diagonal entry.
+
+The two intervals for the conditional mean at \(\text{speed}=15\) are
+\[
+\text{correct: }[37.02,\;45.79],
+\qquad
+\text{naive: }[28.88,\;53.94].
+\]
+The naive interval is roughly \emph{three times too wide}. It is instructive to see where that comes from. The three terms in the variance formula are
+\[
+\underbrace{45.677}_{\Var(\widehat{\beta}_0)}
++
+\underbrace{38.846}_{x^2\Var(\widehat{\beta}_1)}
++
+\underbrace{(-79.765)}_{2x\operatorname{Cov}}
+=
+4.758,
+\]
+so the correct standard error is \(\sqrt{4.758}=2.18\), while the naive calculation reports \(15\times\sqrt{0.173}=6.23\).
+
+Notice what the covariance term is doing. It is negative, and larger in magnitude than either variance on its own. Almost all of the apparent uncertainty in the two coefficients \emph{cancels} when they are combined into a prediction, because the errors move in opposite directions. Ignoring the covariance therefore does not produce a slightly imperfect answer; it produces an answer that is wrong by a factor of three, and in this case wrong in the direction of being far too conservative.
+
+That last detail deserves emphasis, because the mistake is usually described as though omitting a source of uncertainty must make an interval too narrow. Here the opposite happens. Whether the naive interval is too wide or too narrow depends on the sign of the covariance term and on where \(x\) sits relative to \(\overline{x}\). There is no safe direction in which to be wrong, and no rule of thumb that rescues the shortcut.
+
+\subsection{The same data with no intercept}
+
+Now fit a line through the origin, so that the model has exactly one coefficient:
+
+\begin{lstlisting}
+fit0 <- lm(dist ~ speed - 1, data = cars)
+
+# A 1x1 variance-covariance matrix: there is no covariance to ignore.
+vcov(fit0)
+
+predict(fit0, newdata = data.frame(speed = 15), interval = "confidence")
+
+confint(fit0)["speed", ] * 15
+\end{lstlisting}
+
+Here the two approaches agree exactly. Both return \([39.38,\;47.90]\), to every digit R will print. The reason is immediate from the formula: with a single coefficient,
+\[
+\widehat{Y}(x)=\widehat{\beta}_1x,
+\qquad
+\Var\big(\widehat{Y}(x)\big)=x^2\,\Var(\widehat{\beta}_1),
+\]
+and the variance-covariance matrix has collapsed to a single number. There is no intercept to carry its own uncertainty and no off-diagonal entry to discard, so rescaling the coefficient's interval is not an approximation --- it is the correct calculation.
+
+This is the exception that identifies the rule, and the rule is worth stating plainly.
+
+\begin{quote}
+Rescaling one coefficient's confidence interval is valid exactly when the quantity of interest depends on exactly one estimated coefficient. Whenever it depends on two or more, their covariances enter, and the shortcut fails.
+\end{quote}
+
+\subsection{A caution about first differences specifically}
+
+One clarification prevents an overcorrection. Suppose that instead of a predicted \emph{level} we want a first difference: how much higher is the predicted stopping distance at \(\text{speed}=20\) than at \(\text{speed}=15\)? In the simple model with an intercept,
+\[
+\widehat{Y}(20)-\widehat{Y}(15)
+=
+\widehat{\beta}_1(20-15),
+\]
+and the intercept has cancelled. The quantity now depends on one coefficient only, so rescaling its interval by \(5\) is legitimate. In the \texttt{cars} data both routes give a standard error of \(2.078\).
+
+But this survives only because the model is so simple. Add a quadratic term and the same first difference becomes
+\[
+\widehat{\beta}_1(20-15)+\widehat{\beta}_2(20^2-15^2),
+\]
+which loads on two estimated coefficients whose correlation in these data is \(-0.979\). The correct standard error for that difference is \(2.59\); using the \texttt{speed} coefficient alone gives \(10.17\), too large by a factor of four. The same failure returns with interactions, with polynomial terms, with splines, and in any multiple regression where changing one predictor changes more than one term in the fitted equation.
+
+So the trustworthy habit is not to memorize which special cases are safe. It is to let \texttt{predict()} do the calculation, which uses the whole variance-covariance matrix automatically, or --- when the quantity of interest is some other combination that \texttt{predict()} does not offer --- to build the vector \(c\) and compute \(c'\,\texttt{vcov(fit)}\,c\) directly.
+
 \section{The Same Point Prediction Sits at the Center of Both Prediction Intervals}
 
 Notice that the confidence interval for the conditional mean and the prediction interval for a new observation are centered on the same fitted value.
@@ -4142,6 +4275,8 @@ Regression inference introduces several different uncertainty questions that mus
 
 The phrase ``confidence interval'' is therefore ambiguous. Students and analysts should specify the target: confidence interval for the slope coefficient, confidence interval for the fitted mean at \(X=x\), or prediction interval for a new observation at \(X=x\).
 
+These interval types are also not interconvertible by hand. A common temptation is to build an interval for a predicted value out of an interval for a coefficient, by taking a first difference: swinging \(\widehat{\beta}_1\) to each end of its confidence interval and multiplying by \(x\). This fails, because estimated coefficients are not estimated independently. The variance of a fitted value is \(\Var(\widehat{\beta}_0)+x^2\Var(\widehat{\beta}_1)+2x\operatorname{Cov}(\widehat{\beta}_0,\widehat{\beta}_1)\), and the naive procedure uses only the middle term. In simple OLS the covariance equals \(-\overline{x}\Var(\widehat{\beta}_1)\), which vanishes only when \(\overline{x}=0\); geometrically, the fitted line pivots about \((\overline{x},\overline{y})\), so a slope that is too steep forces an intercept that is too low. More generally, the variance of any linear combination \(c'\widehat{\beta}\) is \(c'\widehat{\Var}(\widehat{\beta})c\), which depends on the entire variance-covariance matrix and not on any single standard error. Rescaling one coefficient's interval is valid exactly when the quantity of interest depends on exactly one estimated coefficient---as in a regression through the origin, or a first difference in a model whose intercept cancels---and fails whenever two or more coefficients are involved.
+
 Likewise, a p-value has a specific inferential meaning. Under a stated null hypothesis and the assumptions used by the test, it measures how unusual the observed test statistic, or something more extreme, would be if the null were true. It is not the probability that the null hypothesis is true. A tiny p-value also does not necessarily imply a tight confidence interval: statistical significance depends partly on the estimate's scale and its distance from the null, whereas interval width depends on uncertainty measured in the units of the coefficient.
 
 Confidence intervals and p-values achieve their nominal repeated-sampling properties only under the assumptions required by the inferential procedure. In textbook OLS, those assumptions concern the conditional mean specification and the error process; exact small-sample t procedures additionally invoke normality. Robust procedures can protect against some forms of misspecification, but no command can make inferential validity assumption-free. In most observational social-science problems, analysts do not know the true data-generating equation. Proper specification is therefore something to investigate and defend, not something to assume merely because software returned standard errors.
@@ -4182,6 +4317,8 @@ The overall discipline of regression analysis is therefore to keep several quest
 \item[Expected value] The average, or center, of a distribution, written \(E[\,\cdot\,]\). Despite the everyday connotation of the word, an expected value is not the outcome we anticipate observing, and it need not be a value any individual could have: the expected value of a binary outcome is a probability strictly between zero and one, which no individual observation can equal.\index{expected value!meaning of the term}
 
 \item[Extrapolation] Prediction at predictor values or combinations lying outside the support of the training data. Such predictions can be highly sensitive to functional-form assumptions.\index{extrapolation}
+
+\item[First difference] The change in a predicted or fitted quantity produced by moving a predictor from one value to another, such as \(\widehat{Y}(x_2)-\widehat{Y}(x_1)\). Its uncertainty generally involves several estimated coefficients and therefore their covariances; it can be obtained by rescaling a single coefficient's confidence interval only when the difference depends on exactly one coefficient.\index{first difference}
 
 \item[Fitted value] The model's point prediction \(\widehat{Y}_i\) for an observation's outcome.\index{fitted value}
 
@@ -4231,6 +4368,8 @@ The overall discipline of regression analysis is therefore to keep several quest
 
 \item[Residual] The difference between an observed outcome and its fitted value, \(e_i=Y_i-\widehat{Y}_i\).\index{residual}
 
+\item[Standard error] The estimated standard deviation of an estimator's sampling distribution. The standard errors printed beside regression coefficients are the square roots of the diagonal entries of the variance-covariance matrix, and they say nothing on their own about how the estimates covary.\index{standard error}
+
 \item[Subclassification] A design method that divides the sample into strata (subclasses) of similar covariate values and compares treated and control units within each stratum before aggregating.\index{subclassification}
 
 \item[Support] The region of predictor values or predictor combinations represented in the data. Support is local and, with multiple predictors, multidimensional; checking only each variable's minimum and maximum can conceal sparse or unsupported combinations.\index{support}
@@ -4240,6 +4379,8 @@ The overall discipline of regression analysis is therefore to keep several quest
 \item[Training set] The observations used to fit a model. Performance on the training set can be optimistic relative to performance on new data.\index{training set}
 
 \item[Trimming] Restricting an analysis to the region of common support by discarding units whose covariate values have no counterparts in the comparison group.\index{trimming}
+
+\item[Variance-covariance matrix] The square, symmetric table \(\widehat{\Var}(\widehat{\beta})\), returned by \texttt{vcov()} in R, whose diagonal holds the variances of the estimated coefficients and whose off-diagonal entries hold their covariances. For any fixed vector \(c\), the combination \(c'\widehat{\beta}\) has variance \(c'\,\widehat{\Var}(\widehat{\beta})\,c\). This formula connects uncertainty about coefficients to uncertainty about predicted values, and it depends on the whole matrix rather than on any single entry.\index{variance-covariance matrix}
 
 \item[Weighting] Reweighting observations so that the covariate distributions of treated and control groups become more comparable, reducing the adjustment burden placed on the outcome model.\index{weighting}
 \end{description}

@@ -294,6 +294,77 @@ predict(
   interval = "prediction"
 )
 
+# ---- ch3-vcov-naive-first-difference ----
+fit <- lm(dist ~ speed, data = cars)
+
+# The variance-covariance matrix: variances on the diagonal,
+# covariances off it.
+vcov(fit)
+
+# As a correlation, the two estimates are nearly redundant:
+cov2cor(vcov(fit))
+
+# The off-diagonal entry is exactly -xbar * Var(beta1hat):
+c(
+  off_diagonal = vcov(fit)["(Intercept)", "speed"],
+  formula      = -mean(cars$speed) * vcov(fit)["speed", "speed"]
+)
+
+# CORRECT interval for the conditional mean at speed = 15:
+predict(fit, newdata = data.frame(speed = 15), interval = "confidence")
+
+# NAIVE first difference: hold the intercept fixed and swing the slope
+# across the ends of its own confidence interval.
+coef(fit)[1] + confint(fit)["speed", ] * 15
+
+# ---- ch3-variance-decomposition ----
+V <- vcov(fit)
+x <- 15
+
+terms <- c(
+  var_b0     = V[1, 1],
+  x2_var_b1  = x^2 * V[2, 2],
+  cross_term = 2 * x * V[1, 2]
+)
+terms
+sum(terms)
+
+# Standard errors: correct versus naive.
+c(
+  correct = sqrt(sum(terms)),
+  naive   = x * sqrt(V[2, 2])
+)
+
+# The general formula, c' V c, reproduces what predict() reports:
+cvec <- c(1, x)
+sqrt(t(cvec) %*% V %*% cvec)
+
+# ---- ch3-no-intercept-exact ----
+fit0 <- lm(dist ~ speed - 1, data = cars)
+
+vcov(fit0)   # a 1x1 matrix
+
+predict(fit0, newdata = data.frame(speed = 15), interval = "confidence")
+
+confint(fit0)["speed", ] * 15   # identical, to every printed digit
+
+# ---- ch3-first-difference-boundary ----
+# Simple model: the difference depends on beta1 alone, so both agree.
+c(
+  full  = sqrt(t(c(0, 5)) %*% vcov(fit) %*% c(0, 5)),
+  naive = 5 * sqrt(vcov(fit)["speed", "speed"])
+)
+
+# Quadratic model: the same difference now loads on TWO coefficients.
+fitq <- lm(dist ~ speed + I(speed^2), data = cars)
+cq <- c(0, 20 - 15, 20^2 - 15^2)
+
+c(
+  full  = sqrt(t(cq) %*% vcov(fitq) %*% cq),
+  naive = 5 * sqrt(vcov(fitq)["speed", "speed"]),
+  corr  = cov2cor(vcov(fitq))["speed", "I(speed^2)"]
+)
+
 # ---- ch3-coefficient-ci-plot ----
 fit <- lm(dist ~ speed, data = cars)
 

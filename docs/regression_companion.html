@@ -841,6 +841,106 @@ predict(
 <pre><code>##        fit      lwr      upr
 ## 1 41.40704 10.17482 72.63925</code></pre>
 </div>
+<div id="why-a-coefficients-interval-cannot-be-rescaled-into-a-predictions" class="section level2">
+<h2>Why a coefficient’s interval cannot be rescaled into a
+prediction’s</h2>
+<p>The estimated coefficients are not independent, so uncertainty about
+a fitted value depends on the whole variance-covariance matrix, not on
+one standard error.</p>
+<pre class="r"><code>fit &lt;- lm(dist ~ speed, data = cars)
+
+# The variance-covariance matrix: variances on the diagonal,
+# covariances off it.
+vcov(fit)</code></pre>
+<pre><code>##             (Intercept)      speed
+## (Intercept)   45.676514 -2.6588234
+## speed         -2.658823  0.1726509</code></pre>
+<pre class="r"><code># As a correlation, the two estimates are nearly redundant:
+cov2cor(vcov(fit))</code></pre>
+<pre><code>##             (Intercept)      speed
+## (Intercept)   1.0000000 -0.9468008
+## speed        -0.9468008  1.0000000</code></pre>
+<pre class="r"><code># The off-diagonal entry is exactly -xbar * Var(beta1hat):
+c(
+  off_diagonal = vcov(fit)[&quot;(Intercept)&quot;, &quot;speed&quot;],
+  formula      = -mean(cars$speed) * vcov(fit)[&quot;speed&quot;, &quot;speed&quot;]
+)</code></pre>
+<pre><code>## off_diagonal      formula 
+##    -2.658823    -2.658823</code></pre>
+<pre class="r"><code># CORRECT interval for the conditional mean at speed = 15:
+predict(fit, newdata = data.frame(speed = 15), interval = &quot;confidence&quot;)</code></pre>
+<pre><code>##        fit      lwr      upr
+## 1 41.40704 37.02115 45.79292</code></pre>
+<pre class="r"><code># NAIVE first difference: hold the intercept fixed and swing the slope
+# across the ends of its own confidence interval.
+coef(fit)[1] + confint(fit)[&quot;speed&quot;, ] * 15</code></pre>
+<pre><code>##    2.5 %   97.5 % 
+## 28.87537 53.93870</code></pre>
+<p>The naive interval is about three times too wide. The decomposition
+shows why: the covariance term is negative and larger in magnitude than
+either variance, so most of the coefficient uncertainty cancels when the
+two are combined.</p>
+<pre class="r"><code>V &lt;- vcov(fit)
+x &lt;- 15
+
+terms &lt;- c(
+  var_b0     = V[1, 1],
+  x2_var_b1  = x^2 * V[2, 2],
+  cross_term = 2 * x * V[1, 2]
+)
+terms</code></pre>
+<pre><code>##     var_b0  x2_var_b1 cross_term 
+##   45.67651   38.84645  -79.76470</code></pre>
+<pre class="r"><code>sum(terms)</code></pre>
+<pre><code>## [1] 4.758258</code></pre>
+<pre class="r"><code># Standard errors: correct versus naive.
+c(
+  correct = sqrt(sum(terms)),
+  naive   = x * sqrt(V[2, 2])
+)</code></pre>
+<pre><code>##  correct    naive 
+## 2.181343 6.232692</code></pre>
+<pre class="r"><code># The general formula, c&#39; V c, reproduces what predict() reports:
+cvec &lt;- c(1, x)
+sqrt(t(cvec) %*% V %*% cvec)</code></pre>
+<pre><code>##          [,1]
+## [1,] 2.181343</code></pre>
+<p>With no intercept there is only one coefficient, so there is no
+covariance to ignore and the shortcut becomes exact.</p>
+<pre class="r"><code>fit0 &lt;- lm(dist ~ speed - 1, data = cars)
+
+vcov(fit0)   # a 1x1 matrix</code></pre>
+<pre><code>##            speed
+## speed 0.01998509</code></pre>
+<pre class="r"><code>predict(fit0, newdata = data.frame(speed = 15), interval = &quot;confidence&quot;)</code></pre>
+<pre><code>##        fit      lwr      upr
+## 1 43.63698 39.37562 47.89835</code></pre>
+<pre class="r"><code>confint(fit0)[&quot;speed&quot;, ] * 15   # identical, to every printed digit</code></pre>
+<pre><code>##    2.5 %   97.5 % 
+## 39.37562 47.89835</code></pre>
+<p>A first difference is a separate matter. In the simple model the
+intercept cancels, so rescaling the slope’s interval is legitimate – but
+that survives only because the difference loads on a single coefficient.
+Add a quadratic term and it fails again.</p>
+<pre class="r"><code># Simple model: the difference depends on beta1 alone, so both agree.
+c(
+  full  = sqrt(t(c(0, 5)) %*% vcov(fit) %*% c(0, 5)),
+  naive = 5 * sqrt(vcov(fit)[&quot;speed&quot;, &quot;speed&quot;])
+)</code></pre>
+<pre><code>##     full    naive 
+## 2.077564 2.077564</code></pre>
+<pre class="r"><code># Quadratic model: the same difference now loads on TWO coefficients.
+fitq &lt;- lm(dist ~ speed + I(speed^2), data = cars)
+cq &lt;- c(0, 20 - 15, 20^2 - 15^2)
+
+c(
+  full  = sqrt(t(cq) %*% vcov(fitq) %*% cq),
+  naive = 5 * sqrt(vcov(fitq)[&quot;speed&quot;, &quot;speed&quot;]),
+  corr  = cov2cor(vcov(fitq))[&quot;speed&quot;, &quot;I(speed^2)&quot;]
+)</code></pre>
+<pre><code>##       full      naive       corr 
+##  2.5895512 10.1711022 -0.9794765</code></pre>
+</div>
 <div id="visualizing-a-coefficient-confidence-interval" class="section level2">
 <h2>Visualizing a coefficient confidence interval</h2>
 <pre class="r"><code>fit &lt;- lm(dist ~ speed, data = cars)
