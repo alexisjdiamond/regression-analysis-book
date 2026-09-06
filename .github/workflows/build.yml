@@ -1,22 +1,31 @@
-name: Build book PDF
+name: Build book PDF and deploy site
 
-# Recompiles the book on every push that touches the LaTeX source, so the
-# published PDF can never drift from the source. On a version tag (v0.9,
-# v1.0, ...) it also attaches the PDF to a GitHub Release, giving the
-# public a stable versioned download URL.
+# The PDF is a build product and is no longer stored in the repository.
+# This workflow compiles it from the LaTeX source and publishes it, together
+# with the rest of docs/, straight to GitHub Pages. On a version tag it also
+# attaches the PDF to a GitHub Release, giving the public a stable versioned
+# download URL.
+#
+# Because Pages is now served from this workflow's artifact rather than from
+# the main branch, the site must be redeployed whenever ANYTHING under docs/
+# changes -- not only the .tex source. Hence the unfiltered push trigger.
 
 on:
   push:
     branches: [main]
-    paths:
-      - "regression_analysis_complete_final.tex"
-      - ".github/workflows/build.yml"
     tags:
       - "v*"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write   # needed to attach the PDF to a release
+  pages: write      # needed to deploy to GitHub Pages
+  id-token: write   # needed by the Pages deployment's OIDC check
+
+# Let a running deployment finish rather than cancelling it midway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -32,29 +41,34 @@ jobs:
           root_file: regression_analysis_complete_final.tex
           latexmk_use_lualatex: false
 
-      - name: Upload PDF as workflow artifact
+      - name: Assemble the site
+        run: cp regression_analysis_complete_final.pdf docs/
+
+      - name: Upload PDF as a workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: regression_analysis_complete_final
           path: regression_analysis_complete_final.pdf
 
-      - name: Refresh the copy served by GitHub Pages
-        if: github.ref == 'refs/heads/main'
-        run: |
-          cp regression_analysis_complete_final.pdf docs/regression_analysis_complete_final.pdf
-          if ! git diff --quiet docs/regression_analysis_complete_final.pdf; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add docs/regression_analysis_complete_final.pdf
-            git commit -m "CI: rebuild PDF from source"
-            # Rebase first: pushes made while this build was running would
-            # otherwise reject this one as a non-fast-forward.
-            git pull --rebase origin main
-            git push
-          fi
+      - name: Upload docs/ as the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs
 
       - name: Attach PDF to release (version tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: regression_analysis_complete_final.pdf
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

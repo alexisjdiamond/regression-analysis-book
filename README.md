@@ -24,13 +24,14 @@ Or visit the landing page: **https://alexisjdiamond.github.io/regression-analysi
 ├── regression_companion.R                   # GENERATED from the .Rmd — do not edit by hand
 ├── docs/                                    # Published site (GitHub Pages)
 │   ├── index.html                           #   landing page
-│   ├── regression_analysis_complete_final.pdf
 │   └── regression_companion.html            #   knitted companion
 ├── Makefile                                 # Build automation (see below)
-└── .github/workflows/build.yml              # CI: recompiles the PDF on every push
+└── .github/workflows/build.yml              # CI: compiles the PDF and deploys the site
 ```
 
 The `.tex` and `.Rmd` files are the sources of truth. The PDF, the HTML, and the `.R` script are build products — always regenerate them rather than editing them directly.
+
+**The compiled PDF is deliberately not stored in this repository.** CI compiles it from the LaTeX source on every push to `main` and publishes it directly to GitHub Pages, so the download link can never drift from the source. `make book` writes a local copy into `docs/` for previewing; that copy is git-ignored. Pages is served from the workflow's artifact rather than from a branch, which means any change under `docs/` is published by the same run.
 
 ## Building from source
 

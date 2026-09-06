@@ -10,9 +10,11 @@
 *.fls
 *.fdb_latexmk
 
-# The compiled PDF lives in docs/ (served by GitHub Pages) and in Releases;
-# the copy in the repo root is a build intermediate.
+# The compiled PDF is a build product and is not stored in the repository at
+# all. CI compiles it from the .tex source and publishes it to GitHub Pages and
+# to Releases; `make book` writes local copies for previewing.
 /regression_analysis_complete_final.pdf
+/docs/regression_analysis_complete_final.pdf
 
 # R intermediates
 .Rhistory
