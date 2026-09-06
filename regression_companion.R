@@ -348,6 +348,32 @@ predict(fit0, newdata = data.frame(speed = 15), interval = "confidence")
 
 confint(fit0)["speed", ] * 15   # identical, to every printed digit
 
+# ---- ch3-width-comparison ----
+tq <- qt(0.975, df.residual(fit))
+s  <- summary(fit)$sigma
+
+naive_width <- function(x) 2 * tq * x * sqrt(V[2, 2])
+ci_width    <- function(x) 2 * tq * sqrt(V[1, 1] + x^2 * V[2, 2] + 2 * x * V[1, 2])
+pi_width    <- function(x) 2 * tq * sqrt(s^2 + V[1, 1] + x^2 * V[2, 2] + 2 * x * V[1, 2])
+
+# The one x where the shortcut happens to be right:
+# solve Var(b0) + 2x Cov = 0  =>  x* = mean(x^2) / (2 * mean(x))
+xstar <- mean(cars$speed^2) / (2 * mean(cars$speed))
+
+xs <- c(0, 5, xstar, mean(cars$speed), 20, 25, 100)
+round(
+  data.frame(
+    x             = xs,
+    naive         = naive_width(xs),
+    correct_ci    = ci_width(xs),
+    prediction    = pi_width(xs),
+    naive_over_ci = naive_width(xs) / ci_width(xs)
+  ),
+  3
+)
+
+range(cars$speed)   # x* falls INSIDE the observed data
+
 # ---- ch3-first-difference-boundary ----
 # Simple model: the difference depends on beta1 alone, so both agree.
 c(

@@ -1831,6 +1831,48 @@ Notice what the covariance term is doing. It is negative, and larger in magnitud
 
 That last detail deserves emphasis, because the mistake is usually described as though omitting a source of uncertainty must make an interval too narrow. Here the opposite happens. Whether the naive interval is too wide or too narrow depends on the sign of the covariance term and on where \(x\) sits relative to \(\overline{x}\). There is no safe direction in which to be wrong, and no rule of thumb that rescues the shortcut.
 
+\subsection{The two widths are not even the same shape}
+
+There is a sharper way to see that the shortcut cannot work in general, and it does not depend on any particular dataset. Compare the two widths as \emph{functions of \(x\)}.
+
+Substituting the endpoints of the coefficient's interval into the prediction equation produces predictions that differ by
+\[
+\big(\text{upper}-\text{lower}\big)\times x
+=
+2t\,\mathrm{SE}(\widehat{\beta}_1)\,x ,
+\]
+which is a straight line through the origin. The correct width, written in its standard form, is
+\[
+2t\,\widehat{\sigma}\sqrt{\frac{1}{n}+\frac{(x-\overline{x})^2}{S_{xx}}},
+\]
+which is a hyperbola with a strictly positive minimum at \(x=\overline{x}\). A line through the origin and a curve that never reaches zero are simply different shapes. They may cross, but they cannot coincide.
+
+The clearest case is \(x=0\). There the naive construction gives a width of exactly zero: both endpoints of the coefficient interval, multiplied by zero, return the same prediction \(\widehat{\beta}_0\). Taken at face value, the procedure claims we know \(E[Y\mid X=0]\) with perfect certainty. But \(E[Y\mid X=0]\) is precisely the intercept, and its standard error is printed in the regression output. The shortcut has discarded the one quantity that mattered.
+
+The \texttt{cars} data show the full pattern. Widths of the three intervals, at a range of values of \(x\):
+
+\begin{center}
+\begin{tabular}{rrrrr}
+\toprule
+\(x\) & Naive width & Correct CI width & Prediction interval & Naive \(\div\) CI\\
+\midrule
+0    & 0.00   & 27.18  & 67.55 & 0.00\\
+5    & 8.35   & 19.45  & 64.83 & 0.43\\
+8.59 & 14.35  & 14.35  & 63.66 & 1.00\\
+15.4 \((=\overline{x})\) & 25.73 & 8.75 & 62.46 & 2.94\\
+20   & 33.42  & 11.64  & 62.93 & 2.87\\
+25   & 41.77  & 18.27  & 64.49 & 2.29\\
+100  & 167.09 & 141.63 & 154.54 & 1.18\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The shortcut is far too narrow for small \(x\), exactly right at a single point, and nearly three times too wide near the middle of the data --- which is, unhelpfully, where most predictions are actually made. The crossing point here is \(x=8.59\), obtained by solving \(\Var(\widehat{\beta}_0)+2x\operatorname{Cov}(\widehat{\beta}_0,\widehat{\beta}_1)=0\), which gives \(x^\ast=\overline{x^2}/(2\overline{x})\). It falls inside the observed range of speeds, \(4\) to \(25\). So the procedure is not even reliably conservative: an analyst cannot claim to be erring on the side of caution, because the direction of the error changes within the span of the data.
+
+The ratio does approach one as \(x\) grows large, since the slope term eventually dominates the variance. That is cold comfort, because the region where the approximation improves is the extrapolation region, where the interval is least trustworthy for other reasons entirely.
+
+The final column of the table settles the remaining question. The naive width is nowhere near the prediction interval either. Near the data the prediction interval is roughly \(62\) to \(68\) units wide, while the naive construction ranges from \(8\) to \(42\). This is unsurprising once stated: the prediction interval must include the irreducible error \(\widehat{\sigma}^2\) of Chapter~\ref{chap:foundations}, and the naive calculation contains no information about the spread of \(Y\) around the line at all. It is built entirely from coefficient uncertainty. Nothing in it could ever produce a prediction interval.
+
 \subsection{The same data with no intercept}
 
 Now fit a line through the origin, so that the model has exactly one coefficient:
@@ -1860,9 +1902,13 @@ This is the exception that identifies the rule, and the rule is worth stating pl
 Rescaling one coefficient's confidence interval is valid exactly when the quantity of interest depends on exactly one estimated coefficient. Whenever it depends on two or more, their covariances enter, and the shortcut fails.
 \end{quote}
 
-\subsection{A caution about first differences specifically}
+\subsection{A different question: comparing two predictor values}
 
-One clarification prevents an overcorrection. Suppose that instead of a predicted \emph{level} we want a first difference: how much higher is the predicted stopping distance at \(\text{speed}=20\) than at \(\text{speed}=15\)? In the simple model with an intercept,
+The phrase \emph{first difference} is used in two ways, and it is worth separating them, because one of the two constructions is legitimate and the other is the mistake this section is about.
+
+Everything above concerns differencing across the \emph{endpoints of a coefficient's confidence interval}, at a single value of \(x\), in the hope of recovering an interval for a predicted value. That does not work, for the reasons given.
+
+A genuinely different quantity is the difference between predictions at \emph{two values of the predictor}, with the coefficients held at their estimates. This is the sense the term usually carries in applied work, and here the news is better. Suppose we want to know how much higher the predicted stopping distance is at \(\text{speed}=20\) than at \(\text{speed}=15\). In the simple model with an intercept,
 \[
 \widehat{Y}(20)-\widehat{Y}(15)
 =
@@ -1870,7 +1916,7 @@ One clarification prevents an overcorrection. Suppose that instead of a predicte
 \]
 and the intercept has cancelled. The quantity now depends on one coefficient only, so rescaling its interval by \(5\) is legitimate. In the \texttt{cars} data both routes give a standard error of \(2.078\).
 
-But this survives only because the model is so simple. Add a quadratic term and the same first difference becomes
+But this survives only because the model is so simple, and because the intercept happened to drop out. Add a quadratic term and the same difference becomes
 \[
 \widehat{\beta}_1(20-15)+\widehat{\beta}_2(20^2-15^2),
 \]
@@ -4318,7 +4364,7 @@ The overall discipline of regression analysis is therefore to keep several quest
 
 \item[Extrapolation] Prediction at predictor values or combinations lying outside the support of the training data. Such predictions can be highly sensitive to functional-form assumptions.\index{extrapolation}
 
-\item[First difference] The change in a predicted or fitted quantity produced by moving a predictor from one value to another, such as \(\widehat{Y}(x_2)-\widehat{Y}(x_1)\). Its uncertainty generally involves several estimated coefficients and therefore their covariances; it can be obtained by rescaling a single coefficient's confidence interval only when the difference depends on exactly one coefficient.\index{first difference}
+\item[First difference] The change in a predicted or fitted quantity produced by moving a predictor from one value to another, such as \(\widehat{Y}(x_2)-\widehat{Y}(x_1)\), with the coefficients held at their estimates. Its uncertainty generally involves several estimated coefficients and therefore their covariances; it can be obtained by rescaling a single coefficient's confidence interval only when the difference depends on exactly one coefficient. The term is sometimes used instead for a different and invalid construction: differencing the two predictions obtained by substituting the endpoints of one coefficient's confidence interval, at a single value of \(x\), in the hope of recovering an interval for a predicted value. That quantity is a straight line in \(x\), whereas the correct width is a hyperbola minimized at \(\overline{x}\); the two are not the same interval and generally not the same width.\index{first difference}
 
 \item[Fitted value] The model's point prediction \(\widehat{Y}_i\) for an observation's outcome.\index{fitted value}
 

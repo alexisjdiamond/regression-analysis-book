@@ -443,10 +443,48 @@ predict(fit0, newdata = data.frame(speed = 15), interval = "confidence")
 confint(fit0)["speed", ] * 15   # identical, to every printed digit
 ```
 
-A first difference is a separate matter. In the simple model the intercept
-cancels, so rescaling the slope's interval is legitimate -- but that survives
-only because the difference loads on a single coefficient. Add a quadratic term
-and it fails again.
+The naive width is a straight line in `x`; the correct width is a hyperbola
+with its minimum at `xbar`. Different shapes, so they can cross but cannot
+coincide. Note the `x = 0` row: the shortcut claims perfect certainty about
+`E[Y | X = 0]`, which is just the intercept, whose standard error is printed in
+the regression output.
+
+```{r ch3-width-comparison}
+tq <- qt(0.975, df.residual(fit))
+s  <- summary(fit)$sigma
+
+naive_width <- function(x) 2 * tq * x * sqrt(V[2, 2])
+ci_width    <- function(x) 2 * tq * sqrt(V[1, 1] + x^2 * V[2, 2] + 2 * x * V[1, 2])
+pi_width    <- function(x) 2 * tq * sqrt(s^2 + V[1, 1] + x^2 * V[2, 2] + 2 * x * V[1, 2])
+
+# The one x where the shortcut happens to be right:
+# solve Var(b0) + 2x Cov = 0  =>  x* = mean(x^2) / (2 * mean(x))
+xstar <- mean(cars$speed^2) / (2 * mean(cars$speed))
+
+xs <- c(0, 5, xstar, mean(cars$speed), 20, 25, 100)
+round(
+  data.frame(
+    x             = xs,
+    naive         = naive_width(xs),
+    correct_ci    = ci_width(xs),
+    prediction    = pi_width(xs),
+    naive_over_ci = naive_width(xs) / ci_width(xs)
+  ),
+  3
+)
+
+range(cars$speed)   # x* falls INSIDE the observed data
+```
+
+The shortcut is too narrow for small `x`, exactly right at one point, and
+almost three times too wide near the middle of the data. It is not reliably
+conservative, and it never comes close to the prediction interval -- it
+contains no information about the spread of `Y` around the line at all.
+
+A first difference across two values of `x` is a different question. In the
+simple model the intercept cancels, so rescaling the slope's interval is
+legitimate -- but that survives only because the difference loads on a single
+coefficient. Add a quadratic term and it fails again.
 
 ```{r ch3-first-difference-boundary}
 # Simple model: the difference depends on beta1 alone, so both agree.

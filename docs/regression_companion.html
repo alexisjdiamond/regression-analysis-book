@@ -918,10 +918,54 @@ vcov(fit0)   # a 1x1 matrix</code></pre>
 <pre class="r"><code>confint(fit0)[&quot;speed&quot;, ] * 15   # identical, to every printed digit</code></pre>
 <pre><code>##    2.5 %   97.5 % 
 ## 39.37562 47.89835</code></pre>
-<p>A first difference is a separate matter. In the simple model the
-intercept cancels, so rescaling the slope’s interval is legitimate – but
-that survives only because the difference loads on a single coefficient.
-Add a quadratic term and it fails again.</p>
+<p>The naive width is a straight line in <code>x</code>; the correct
+width is a hyperbola with its minimum at <code>xbar</code>. Different
+shapes, so they can cross but cannot coincide. Note the
+<code>x = 0</code> row: the shortcut claims perfect certainty about
+<code>E[Y | X = 0]</code>, which is just the intercept, whose standard
+error is printed in the regression output.</p>
+<pre class="r"><code>tq &lt;- qt(0.975, df.residual(fit))
+s  &lt;- summary(fit)$sigma
+
+naive_width &lt;- function(x) 2 * tq * x * sqrt(V[2, 2])
+ci_width    &lt;- function(x) 2 * tq * sqrt(V[1, 1] + x^2 * V[2, 2] + 2 * x * V[1, 2])
+pi_width    &lt;- function(x) 2 * tq * sqrt(s^2 + V[1, 1] + x^2 * V[2, 2] + 2 * x * V[1, 2])
+
+# The one x where the shortcut happens to be right:
+# solve Var(b0) + 2x Cov = 0  =&gt;  x* = mean(x^2) / (2 * mean(x))
+xstar &lt;- mean(cars$speed^2) / (2 * mean(cars$speed))
+
+xs &lt;- c(0, 5, xstar, mean(cars$speed), 20, 25, 100)
+round(
+  data.frame(
+    x             = xs,
+    naive         = naive_width(xs),
+    correct_ci    = ci_width(xs),
+    prediction    = pi_width(xs),
+    naive_over_ci = naive_width(xs) / ci_width(xs)
+  ),
+  3
+)</code></pre>
+<pre><code>##        x   naive correct_ci prediction naive_over_ci
+## 1   0.00   0.000     27.178     67.554         0.000
+## 2   5.00   8.354     19.454     64.833         0.429
+## 3   8.59  14.352     14.352     63.489         1.000
+## 4  15.40  25.732      8.746     62.461         2.942
+## 5  20.00  33.418     11.644     62.932         2.870
+## 6  25.00  41.772     18.270     64.488         2.286
+## 7 100.00 167.089    141.628    154.542         1.180</code></pre>
+<pre class="r"><code>range(cars$speed)   # x* falls INSIDE the observed data</code></pre>
+<pre><code>## [1]  4 25</code></pre>
+<p>The shortcut is too narrow for small <code>x</code>, exactly right at
+one point, and almost three times too wide near the middle of the data.
+It is not reliably conservative, and it never comes close to the
+prediction interval – it contains no information about the spread of
+<code>Y</code> around the line at all.</p>
+<p>A first difference across two values of <code>x</code> is a different
+question. In the simple model the intercept cancels, so rescaling the
+slope’s interval is legitimate – but that survives only because the
+difference loads on a single coefficient. Add a quadratic term and it
+fails again.</p>
 <pre class="r"><code># Simple model: the difference depends on beta1 alone, so both agree.
 c(
   full  = sqrt(t(c(0, 5)) %*% vcov(fit) %*% c(0, 5)),
