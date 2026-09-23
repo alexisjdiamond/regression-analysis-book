@@ -761,6 +761,66 @@ summary(fit_cubic)$r.squared
 summary(fit_logx)$r.squared
 ```
 
+## An additive model imposes parallel lines
+
+```{r ch4-additive-parallel}
+fit_additive_hp <- lm(mpg ~ hp + am, data = mtcars)
+summary(fit_additive_hp)
+
+# One slope on hp serves both groups, so the fitted lines can differ
+# only by a constant vertical shift -- the coefficient on am.
+coef(fit_additive_hp)
+
+# Here the restriction costs almost nothing: allowing the slopes to
+# differ returns an interaction estimate of essentially zero.
+coef(lm(mpg ~ hp * am, data = mtcars))["hp:am"]
+```
+
+```{r ch4-additive-parallel-plot}
+plot(
+  mtcars$hp,
+  mtcars$mpg,
+  pch = ifelse(mtcars$am == 0, 1, 19),
+  xlab = "Gross horsepower",
+  ylab = "Miles per gallon",
+  main = "No interaction: mpg ~ hp + am"
+)
+
+auto_hp <- seq(
+  min(mtcars$hp[mtcars$am == 0]),
+  max(mtcars$hp[mtcars$am == 0]),
+  length.out = 100
+)
+
+manual_hp <- seq(
+  min(mtcars$hp[mtcars$am == 1]),
+  max(mtcars$hp[mtcars$am == 1]),
+  length.out = 100
+)
+
+auto_pred <- predict(
+  fit_additive_hp,
+  newdata = data.frame(hp = auto_hp, am = 0)
+)
+
+manual_pred <- predict(
+  fit_additive_hp,
+  newdata = data.frame(hp = manual_hp, am = 1)
+)
+
+lines(auto_hp, auto_pred, lwd = 3)
+lines(manual_hp, manual_pred, lwd = 3, lty = 2)
+
+legend(
+  "topright",
+  legend = c("Automatic", "Manual"),
+  pch = c(1, 19),
+  lty = c(1, 2),
+  lwd = c(3, 3),
+  bty = "n"
+)
+```
+
 ## Additive model versus interaction model
 
 ```{r ch4-mtcars-interaction}

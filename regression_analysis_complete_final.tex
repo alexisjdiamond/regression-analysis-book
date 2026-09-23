@@ -823,7 +823,7 @@ t=
 \]
 The \(p\)-value asks how surprising a test statistic at least this incompatible with the null hypothesis would be \emph{if the null hypothesis were true and the assumptions used for the test were valid}.
 
-A small \(p\)-value therefore says that the observed estimate is difficult to reconcile with the particular null hypothesis under the assumed statistical model. It does \emph{not} mean that the probability the null hypothesis is true is small. It also does not tell us whether an effect is substantively important.\footnote{\emph{Substantive importance} means importance in the real scientific, policy, practical, or decision context, rather than merely statistical detectability. An effect can be estimated very precisely and have a tiny \(p\)-value while still being too small to matter in practice.}
+A small \(p\)-value therefore says that the observed estimate is difficult to reconcile with the particular null hypothesis under the assumed statistical model. It does \emph{not} mean that the probability the null hypothesis is true is small. It also does not tell us whether the estimated quantity is substantively important.\footnote{\emph{Substantive importance} means importance in the real scientific, policy, practical, or decision context, rather than merely statistical detectability. A coefficient can be estimated very precisely and have a tiny \(p\)-value while still being too small to matter in practice.}
 
 For the \texttt{cars} regression, the slope is about \(3.932\), its conventional standard error is about \(0.416\), and the resulting \(t\)-statistic is about \(9.46\). The conventional two-sided \(p\)-value is extremely small.
 
@@ -941,7 +941,7 @@ Some assumption failures can be handled with robust methods.\footnote{\emph{Robu
 
 In many real-world applications, analysts do not know the true conditional expectation function. That is one reason they are using regression in the first place.
 
-Suppose we are predicting wages from education, experience, occupation, region, and other variables. Is the effect of experience linear? Does it flatten with age? Does education interact with occupation? Are relevant predictors missing? Does error variance differ across groups? Are observations independent, or are people nested inside common labor markets? There is rarely a known mathematical law that settles these questions.
+Suppose we are predicting wages from education, experience, occupation, region, and other variables. Is the relationship with experience linear? Does it flatten with age? Does education interact with occupation? Are relevant predictors missing? Does error variance differ across groups? Are observations independent, or are people nested inside common labor markets? There is rarely a known mathematical law that settles these questions.
 
 Diagnostics can help us find evidence that a specification is inadequate. Residual plots may reveal curvature or heteroskedasticity. Subject-matter knowledge may suggest important interactions. Flexible models can be compared with restrictive ones. But failure to detect a problem is not proof that the model is correctly specified. Many different data-generating mechanisms can look similar in one finite sample.
 
@@ -1003,7 +1003,7 @@ The first is the \emph{reducible error}. It measures how badly \(\widehat{f}\) a
 
 The second is the \emph{irreducible error}. It is the variability of \(Y\) among units that share the same value of \(X\), and no amount of modeling skill can remove it, because it is not a function of \(X\) at all. Even an analyst handed the true \(f\) --- perfect knowledge of the conditional expectation function --- would still make prediction errors of this size. Recall the five outcomes from Chapter~\ref{chap:intro}, \(7,\,9,\,10,\,11,\,13\), all sharing the same value of \(X\). Their spread around \(10\) is exactly this quantity. Knowing \(X\) more precisely does not help; every one of these units already has the same \(X\).
 
-Where does irreducible error come from? Typically from three sources: variables that genuinely affect \(Y\) but are not contained in \(X\), including variables nobody has measured or could measure; inherent randomness in the outcome itself; and measurement error in \(Y\). All three produce variation that the predictors are simply unable to speak to.
+Where does irreducible error come from? Typically from three sources: variables that carry information about \(Y\) beyond what \(X\) contains, including variables nobody has measured or could measure; inherent randomness in the outcome itself; and measurement error in \(Y\). All three produce variation that the predictors are simply unable to speak to.
 
 One qualification matters, and it is easy to miss. Irreducible error is irreducible \emph{given a particular set of predictors}. It is a property of the pair \((Y,X)\), not of \(Y\) alone. If we go out and measure a new variable and add it to \(X\), we have changed the conditioning set: \(f\) becomes a different function, and variation that was formerly irreducible may become reducible. This is one reason that acquiring better predictors is often more valuable than fitting a cleverer model to the predictors already in hand. What cannot be done is to squeeze that variation out by modeling alone, once the predictor set is fixed.
 
@@ -2538,7 +2538,7 @@ fit_interaction <- lm(
 summary(fit_interaction)
 \end{lstlisting}
 
-Notice the final point carefully. If \(X=0\) is outside the observed data or is substantively meaningless, the main-effect coefficient on the binary variable can become awkward to interpret.
+Notice the final point carefully. If \(X=0\) is outside the observed data or is substantively meaningless, the coefficient on the binary variable can become awkward to interpret.
 
 One solution is to center the continuous predictor:
 
@@ -2757,7 +2757,139 @@ fit_interaction <- lm(y ~ x + d + x:d, data = dat)
 fit_interaction <- lm(y ~ x * d, data = dat)
 \end{lstlisting}
 
-The star expands to the two main effects plus their interaction.
+The star expands to \texttt{x}, \texttt{d}, and their interaction.\footnote{Terms that appear on their own alongside an interaction are conventionally called \emph{main effects}, a name inherited from the analysis of variance. That name is worth recognizing, since it is standard in textbooks and in R's own documentation, but this book avoids it: the quantity is a coefficient in a particular specification, not an effect that a research design has identified.}
+
+\section{Empirical Example: An Additive Model Imposes Parallel Lines}
+\index{mtcars data set@\texttt{mtcars} data set}\index{interaction!absence of}
+
+The restriction is easiest to see in a case where it does no harm. Using the built-in \texttt{mtcars} data, predict fuel economy from gross horsepower (\texttt{hp}) and transmission type (\texttt{am}), with no interaction term:
+
+\begin{lstlisting}
+fit_additive <- lm(mpg ~ hp + am, data = mtcars)
+summary(fit_additive)
+\end{lstlisting}
+
+The fitted equation is approximately
+\[
+\widehat{mpg}
+=
+26.585
+-0.0589\,hp
++5.277\,am.
+\]
+
+For automatic cars, \(am=0\), so
+\[
+\widehat{mpg}_{auto}
+=
+26.585-0.0589\,hp,
+\]
+and for manual cars, \(am=1\), so
+\[
+\widehat{mpg}_{manual}
+=
+31.862-0.0589\,hp.
+\]
+
+The coefficient on \texttt{hp} is \(-0.0589\) in both equations, because the specification contains only one such coefficient. The two fitted lines are therefore parallel by construction, separated everywhere by the same vertical distance of \(5.277\) miles per gallon. Figure~\ref{fig:additive_mtcars} shows them.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.9\textwidth,
+    height=0.52\textwidth,
+    xlabel={Gross horsepower},
+    ylabel={Miles per gallon},
+    xmin=35, xmax=350,
+    ymin=8, ymax=36,
+    legend style={at={(0.5,-0.20)},anchor=north,legend columns=2},
+    grid=major
+]
+\addplot[only marks,mark=o,mark size=1.8pt] coordinates {
+(62,24.4) (95,22.8) (97,21.5) (105,18.1) (110,21.4) (123,19.2)
+(123,17.8) (150,15.5) (150,15.2) (175,18.7) (175,19.2) (180,16.4)
+(180,17.3) (180,15.2) (205,10.4) (215,10.4) (230,14.7) (245,14.3)
+(245,13.3)
+};
+\addlegendentry{Automatic observations}
+
+\addplot[only marks,mark=*,mark size=1.8pt] coordinates {
+(52,30.4) (65,33.9) (66,32.4) (66,27.3) (91,26.0) (93,22.8)
+(109,21.4) (110,21.0) (110,21.0) (113,30.4) (175,19.7) (264,15.8)
+(335,15.0)
+};
+\addlegendentry{Manual observations}
+
+\addplot[domain=62:245,samples=2,very thick] {26.584914 - 0.0588878*x};
+\addlegendentry{Automatic fitted line}
+
+\addplot[domain=52:335,samples=2,very thick,dashed] {31.861999 - 0.0588878*x};
+\addlegendentry{Manual fitted line}
+\end{axis}
+\end{tikzpicture}
+\caption{With no interaction term, the additive model forces one common slope on \texttt{hp}. The two fitted lines can differ only by a constant vertical shift, here estimated at \(5.277\) miles per gallon with a standard error of \(1.08\). The lines are drawn across each group's observed horsepower range.}
+\label{fig:additive_mtcars}
+\end{figure}
+
+Here the restriction is defensible. Allowing the slopes to differ,
+
+\begin{lstlisting}
+fit_interaction_hp <- lm(mpg ~ hp * am, data = mtcars)
+coef(fit_interaction_hp)["hp:am"]
+\end{lstlisting}
+
+returns an interaction estimate of about \(0.0004\), with a standard error of about \(0.016\). Two separate things are worth noting. First, the restriction is cheap in this sample: dropping the interaction moves no fitted value by more than \(0.03\) miles per gallon and leaves \(R^2\) unchanged at \(0.782\). Second, the interaction is estimated imprecisely---its standard error is roughly forty times the estimate itself---so the defensible statement is that these data give no reason to think the slopes differ, not that the slopes are known to be equal. With thirty-two cars, a moderate difference in slopes would not be detectable. Imposing a common slope is inexpensive here, but it remains a restriction rather than a finding. The next section shows a case where the same restriction is not cheap at all.
+
+The base-R version of the graph:
+
+\begin{lstlisting}
+fit_additive <- lm(mpg ~ hp + am, data = mtcars)
+
+plot(
+  mtcars$hp,
+  mtcars$mpg,
+  pch = ifelse(mtcars$am == 0, 1, 19),
+  xlab = "Gross horsepower",
+  ylab = "Miles per gallon",
+  main = "No interaction: mpg ~ hp + am"
+)
+
+# Each group's line is drawn only over that group's observed support
+auto_hp <- seq(
+  min(mtcars$hp[mtcars$am == 0]),
+  max(mtcars$hp[mtcars$am == 0]),
+  length.out = 100
+)
+
+manual_hp <- seq(
+  min(mtcars$hp[mtcars$am == 1]),
+  max(mtcars$hp[mtcars$am == 1]),
+  length.out = 100
+)
+
+auto_pred <- predict(
+  fit_additive,
+  newdata = data.frame(hp = auto_hp, am = 0)
+)
+
+manual_pred <- predict(
+  fit_additive,
+  newdata = data.frame(hp = manual_hp, am = 1)
+)
+
+lines(auto_hp, auto_pred, lwd = 3)
+lines(manual_hp, manual_pred, lwd = 3, lty = 2)
+
+legend(
+  "topright",
+  legend = c("Automatic", "Manual"),
+  pch = c(1, 19),
+  lty = c(1, 2),
+  lwd = c(3, 3),
+  bty = "n"
+)
+\end{lstlisting}
 
 \section{Empirical Example: Weight, Transmission, and Fuel Economy}
 \index{mtcars data set@\texttt{mtcars} data set}
@@ -2933,9 +3065,9 @@ legend(
 
 Notice that the plotted lines stop at the observed range for each group. That choice anticipates the next topic: extrapolation.
 
-\section{Interaction Effects Depend on the Value of the Other Variable}
+\section{With an Interaction, the Fitted Slope Depends on the Other Variable}
 
-Once an interaction is present, there is generally no single coefficient that describes ``the effect of \(X\)'' everywhere in the fitted model.
+Once an interaction is present, there is generally no single coefficient that describes the fitted relationship between \(X\) and \(Y\) everywhere in the model.
 
 For
 \[
@@ -3043,6 +3175,58 @@ With this particular random seed, the straight-line model predicts approximately
 
 The point is not that the quadratic answer is correct and the linear answer is wrong. The point is that \emph{the data leave the behavior inside the gap underdetermined}. A straight line, a smooth curve, a threshold, or some other process could connect the two observed regions differently.
 
+Figure~\ref{fig:gap_interpolation} shows what the two models do across the gap.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.9\textwidth,
+    height=0.52\textwidth,
+    xlabel={\(X\)},
+    ylabel={\(Y\)},
+    xmin=0.7, xmax=10.3,
+    ymin=3, ymax=24,
+    legend style={at={(0.5,-0.20)},anchor=north,legend columns=2},
+    grid=major
+]
+\draw[fill=black!10,draw=none] (axis cs:4,3) rectangle (axis cs:7,24);
+\draw[densely dotted,thick] (axis cs:4,3) -- (axis cs:4,24);
+\draw[densely dotted,thick] (axis cs:7,3) -- (axis cs:7,24);
+
+\addplot[only marks,mark=*,mark size=1.5pt] coordinates {
+(1.026,5.81) (1.050,5.62) (1.269,4.81) (1.405,6.23) (1.697,6.84) (1.842,7.78)
+(1.868,7.59) (1.935,7.96) (1.937,8.51) (2.023,8.64) (2.176,9.17) (2.268,9.08)
+(2.338,8.86) (2.406,9.56) (2.414,8.72) (2.452,9.31) (2.476,8.92) (2.532,9.11)
+(2.653,8.99) (2.677,9.89) (2.693,9.67) (2.988,10.62) (3.008,11.85) (3.051,10.55)
+(3.205,12.16) (3.222,10.97) (3.364,11.58) (3.387,12.12) (3.400,12.84) (3.441,12.53)
+(3.460,12.31) (3.529,12.42) (3.623,12.93) (3.839,13.14) (3.974,14.27)
+(7.038,20.73) (7.055,20.13) (7.125,21.93) (7.204,20.93) (7.211,21.57) (7.256,21.04)
+(7.456,20.29) (7.531,20.91) (7.544,20.59) (7.692,20.39) (7.722,19.80) (7.751,19.99)
+(7.834,19.87) (8.007,20.32) (8.057,19.72) (8.410,20.68) (8.624,19.36) (8.823,19.31)
+(8.828,17.76) (8.921,18.64) (8.963,19.00) (8.995,18.94) (9.102,19.26) (9.114,18.23)
+(9.160,18.52) (9.355,17.81) (9.449,18.44) (9.516,18.58) (9.524,18.77) (9.546,17.78)
+(9.776,18.18) (9.807,18.12) (9.872,17.59) (9.985,17.02) (9.989,17.88)
+};
+\addlegendentry{Training observations}
+
+\addplot[domain=1:10,samples=2,very thick]{6.09039 + 1.52535*x};
+\addlegendentry{Linear fit}
+
+\addplot[domain=1:10,samples=120,very thick,dashed]{-1.82436 + 5.55963*x - 0.35848*x^2};
+\addlegendentry{Quadratic fit}
+
+\addplot[only marks,mark=o,mark size=3.2pt,very thick] coordinates {(5.5,14.48)};
+\addlegendentry{Linear prediction at \(X=5.5\)}
+
+\addplot[only marks,mark=triangle,mark size=3.6pt,very thick] coordinates {(5.5,17.91)};
+\addlegendentry{Quadratic prediction at \(X=5.5\)}
+\end{axis}
+\end{tikzpicture}
+\caption{Two models fitted to the same data, which contain no observations between \(X=4\) and \(X=7\) (shaded). Both fit the observed regions closely and both return a prediction at \(X=5.5\), but they disagree by about \(3.4\) units. Nothing in the data adjudicates between them, because nothing was observed there.}
+\label{fig:gap_interpolation}
+\end{figure}
+
 The gap can be displayed directly in base R:
 
 \begin{lstlisting}
@@ -3129,6 +3313,9 @@ A literal empty gap is an extreme case. The same issue arises gradually when obs
 
 This is one reason it is useful to look at the distribution of predictors rather than merely reporting their minimum and maximum. Scatterplots, histograms, rug marks, and counts in local neighborhoods can reveal whether a nominal interpolation is actually taking place in a data-rich region.
 
+That advice is neither new nor controversial. It appears in introductory texts, in the regression-diagnostics literature, and in essentially every treatment of causal inference written in the last forty years. Whether it is routinely \emph{followed} is a different question, and our impression is that it is not. Published regression tables report coefficients, standard errors, and \(R^2\); they rarely report anything about where the predictor data are dense and where they are thin. Referees ask whether a coefficient is statistically significant far more often than they ask whether the comparison it encodes is supported by observations. The result is a practice that is universally endorsed and frequently skipped --- and skipped silently, because the omission leaves no trace in the output. A regression fitted where the data are thick and a regression fitted where the data are almost absent print the same table.
+
+
 \subsection{With several predictors, the problem is more important}
 \index{support!multidimensional}\index{interpolation!multidimensional}
 
@@ -3145,7 +3332,14 @@ Now ask for a prediction for a 22-year-old earning \$180,000. Age 22 is inside t
 
 A multiple regression can still calculate a prediction. Algebraically, nothing prevents it. Empirically, however, the prediction is relying on the model to combine predictor values in a region where the joint data provide little guidance.
 
-This is why \emph{support} is a better concept than the one-dimensional min--max range. In several dimensions, support concerns the predictor combinations that are actually represented by observations.
+This difficulty has a name, and it gets rapidly worse as predictors accumulate. As the number of predictors grows, the volume of the space they span grows exponentially, so any fixed sample becomes sparse within it. Statisticians call this the \emph{curse of dimensionality}, a phrase due to Richard Bellman.\index{curse of dimensionality}
+
+The arithmetic is worth seeing. Suppose we want enough data that no point in the predictor space is farther than \(0.1\) from an observation. On a single predictor scaled to the unit interval, about \(10\) observations suffice. On two predictors --- the unit square --- it takes about \(100\). On three, about \(1{,}000\). On ten predictors it takes \(10^{10}\), ten billion observations, and on twenty it takes more observations than any study will ever collect. The requirement multiplies by ten with each predictor added.
+
+Why is this a \emph{curse} rather than merely an inconvenience? Because adding a predictor feels like acquiring information while it simultaneously thins the information already in hand. The sample size does not change; the space those observations must cover expands. Neighbors that were close in two dimensions become distant in ten, and in high dimensions almost every observation is far from almost every other one. The local evidence that disciplines a fitted function --- observations near the point where a prediction is wanted --- quietly disappears, and the functional form silently takes over the work. The intuition built on a single predictor, \emph{my data run from 2 to 10, so a prediction at 6 is an interpolation}, therefore becomes steadily more misleading as predictors are added. With enough of them, nearly every prediction is an extrapolation in the sense that actually matters, however comfortably each individual variable sits inside its own observed range.
+
+
+This is why \emph{support} is a better concept than the one-dimensional min--max range. In several dimensions, support concerns the predictor combinations that are actually represented by observations.\footnote{The definitive treatment is Gary King and Langche Zeng, ``The Dangers of Extreme Counterfactuals,'' \emph{Political Analysis} 14 (2006): 131--159, available at \url{https://gking.harvard.edu/files/counterft.pdf}. King and Zeng make the idea precise using the \emph{convex hull} of the observed predictor data --- the smallest convex set containing all the observations. A counterfactual inside the hull requires interpolation; one outside requires extrapolation. They prove that inferences farther from the data permit more model dependence, and they show that in real applications counterfactuals routinely fall outside the hull even when every variable is individually within its observed range. They also note that directly comparing multivariate predictor distributions is ``essentially impossible without stringent assumptions'' once there are more than a few variables --- the curse of dimensionality again.}
 
 The distinction becomes crucial for causal inference. A treated unit may have values of every covariate that individually fall within the control group's range while nevertheless having a combination of covariates unlike any control unit. Calling the required prediction ``interpolation'' merely because each variable is separately in range can therefore be misleading.
 
@@ -3919,6 +4113,24 @@ Before interpreting a fitted comparison, ask not only \emph{``Can the regression
 }
 \end{center}
 
+\subsection{When the specification decides what can be found}
+\index{model dependence}\index{functional form!and discoverability}
+
+The support question --- are there observations near the comparison I want to make? --- has a close cousin. Even where the data are plentiful, the specification can rule out conclusions in advance, so that a pattern present in the data cannot appear in the results no matter how strongly the data express it.
+
+The sharpest statement of this we know comes from a methodological exchange about predicting international conflict. Beck, King, and Zeng were responding to a critique of their neural-network models of war, in which the critics had substituted an ordinary logistic regression. Examining what that specification could and could not represent, the authors wrote that rival hypotheses
+
+\begin{quote}
+were impossible to uncover with the logit model \ldots specified, \emph{no matter how loudly the patterns in the data screamed}.\footnote{Nathaniel Beck, Gary King, and Langche Zeng, ``Theory and Evidence in International Conflict: A Response to de Marchi, Gelpi, and Grynaviski,'' \emph{American Political Science Review} 98, no.~2 (May 2004): 379--389, at 387. Available at \url{https://gking.harvard.edu/files/toe-resp.pdf}.}
+\end{quote}
+
+The phrase repays unpacking, because it is not rhetorical excess. The logit specification in question entered the two countries' democracy scores through their product and squared product. That is an algebraic restriction with a substantive consequence: it forces the fitted probability of conflict for two autocracies, at \((-10,-10)\), to resemble the probability for a mixed pair at \((-10,10)\) or \((10,-10)\). A researcher using that specification could discover a democratic peace, because the model can place low conflict probability where both scores are high. But an \emph{autocratic} peace --- low conflict probability where both scores are low --- was not a hypothesis the model could express. Fitting it more carefully, or with more data, would not have helped. The restriction was in the equation, not in the evidence.
+
+When the same data were fitted with a model that nests the logit as a special case, two separate low-conflict regions appeared, one for mutual democracies and one for mutual autocracies, with a ridge of high conflict probability between them. The second region was not a subtlety: across it the fitted probability fell by roughly thirty percentage points.
+
+The general lesson belongs beside the support question rather than replacing it. Both are ways a regression can return a confident number that the data did not license. Weak support means there were no observations near the comparison being made. A restrictive functional form means the answer was constrained before the data were consulted at all. In the first case the data are silent; in the second, as Beck, King, and Zeng put it, the data may be screaming and the model unable to hear it.
+
+
 \section{How to Think About Functional Form in Practice}
 
 There is no mechanical procedure that guarantees the correct functional form in real-world research. But several habits are useful.
@@ -4303,7 +4515,7 @@ Regression coefficients are instructions for how the prediction changes. With a 
 
 In multiple regression, a coefficient is interpreted conditional on the other included predictors. In an additive model, the coefficient on \(X\) tells us how the fitted prediction changes when \(X\) increases by one unit while the other predictors are kept at fixed values. This is a statement about the fitted prediction function; it is not automatically a causal statement. Whether a regression coefficient can be interpreted causally requires a research design or assumptions that justify the relevant counterfactual comparison.
 
-Interactions change coefficient interpretations. If a continuous predictor \(X\) and a binary group indicator \(D\) enter only additively, the model imposes the same slope on \(X\) in both groups. Adding \(X\times D\) allows the slopes to differ. With an interaction present, there is often no single universal ``effect of \(X\)'' in the fitted model: the fitted relationship between \(X\) and \(Y\) depends on the value of the interacting variable.
+Interactions change coefficient interpretations. If a continuous predictor \(X\) and a binary group indicator \(D\) enter only additively, the model imposes the same slope on \(X\) in both groups. Adding \(X\times D\) allows the slopes to differ. With an interaction present, there is often no single universal coefficient for \(X\) in the fitted model: the fitted relationship between \(X\) and \(Y\) depends on the value of the interacting variable.
 
 Prediction accuracy can be measured by mean squared error. In OLS with an intercept, the natural zero-predictor benchmark predicts the same number---the sample mean of \(Y\)---for every observation. \(R^2\) measures the fraction of that mean-only model's squared prediction error that disappears after predictors are introduced:
 \[
