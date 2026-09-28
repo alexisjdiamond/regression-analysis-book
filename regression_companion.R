@@ -920,6 +920,55 @@ fit_quadratic_adjustment <- lm(
 coef(fit_linear_adjustment)["D"]
 coef(fit_quadratic_adjustment)["D"]
 
+# ---- ch5-model-dependence-plot ----
+# Predicted untreated outcome for treated units at x = 12
+predict(fit_linear_adjustment, newdata = data.frame(D = 0, x = 12))
+predict(fit_quadratic_adjustment, newdata = data.frame(D = 0, x = 12))
+
+# Draw a group's fitted function in black over [from, to],
+# its observed support, and in grey elsewhere (extrapolation)
+draw_fit <- function(fit, d, from, to, lty) {
+  full <- seq(0, 16, length.out = 200)
+  supported <- seq(from, to, length.out = 100)
+  lines(
+    full,
+    predict(fit, newdata = data.frame(D = d, x = full)),
+    col = "grey60",
+    lty = lty
+  )
+  lines(
+    supported,
+    predict(fit, newdata = data.frame(D = d, x = supported)),
+    lwd = 2,
+    lty = lty
+  )
+}
+
+plot_adjustment <- function(fit, title) {
+  plot(
+    causal_dat$x,
+    causal_dat$Y,
+    type = "n",
+    ylim = c(-20, 135),
+    xlab = "Confounder X",
+    ylab = "Outcome Y",
+    main = title
+  )
+  rect(5, -30, 8, 145, col = "grey90", border = NA)
+  points(
+    causal_dat$x,
+    causal_dat$Y,
+    pch = ifelse(causal_dat$D == 1, 19, 1)
+  )
+  draw_fit(fit, d = 0, from = 0, to = 8, lty = 1)    # controls
+  draw_fit(fit, d = 1, from = 5, to = 16, lty = 2)   # treated
+}
+
+par(mfrow = c(1, 2))
+plot_adjustment(fit_linear_adjustment, "Linear adjustment")
+plot_adjustment(fit_quadratic_adjustment, "Quadratic adjustment")
+par(mfrow = c(1, 1))
+
 # ---- ch5-overlap-restriction ----
 overlap_dat <- causal_dat[
   causal_dat$x >= 5 & causal_dat$x <= 8,
@@ -980,3 +1029,42 @@ fit_rct_quadratic <- lm(Y ~ D + x + I(x^2), data = rct_dat)
 coef(fit_rct_simple)["D"]
 coef(fit_rct_linear)["D"]
 coef(fit_rct_quadratic)["D"]
+
+# ---- ch5-balanced-rct-plot ----
+x_grid <- seq(0, 16, length.out = 200)
+
+plot(
+  rct_dat$x,
+  rct_dat$Y,
+  pch = ifelse(rct_dat$D == 1, 19, 1),
+  ylim = c(-20, 135),
+  xlab = "Pretreatment covariate X",
+  ylab = "Observed outcome Y",
+  main = "A Balanced Randomized Design"
+)
+
+lines(
+  x_grid,
+  predict(fit_rct_linear, newdata = data.frame(D = 0, x = x_grid)),
+  lwd = 2
+)
+lines(
+  x_grid,
+  predict(fit_rct_linear, newdata = data.frame(D = 1, x = x_grid)),
+  lwd = 2,
+  lty = 2
+)
+
+legend(
+  "topleft",
+  legend = c(
+    "Control",
+    "Treated",
+    "Linear adjustment, control",
+    "Linear adjustment, treated"
+  ),
+  pch = c(1, 19, NA, NA),
+  lty = c(NA, NA, 1, 2),
+  lwd = c(NA, NA, 2, 2),
+  bty = "n"
+)

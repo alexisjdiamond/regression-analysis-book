@@ -1,8 +1,8 @@
 ---
 title: "Regression Analysis: Companion R Notebook"
-subtitle: "Version 0.9"
+subtitle: "Version 0.9.1"
 author: "Alexis Diamond, PhD (assisted by Claude and ChatGPT)"
-date: "August 26, 2026"
+date: "September 28, 2026"
 output: html_document
 editor_options:
   chunk_output_type: console
@@ -1104,6 +1104,60 @@ coef(fit_quadratic_adjustment)["D"]
 
 The two specifications use the same observations but impose different functional forms. The correctly specified quadratic model recovers 6, while the linear adjustment gives a very different answer because the groups have limited overlap.
 
+## Seeing model dependence
+
+Each adjustment draws parallel fitted outcome functions for controls (solid) and treated units (dashed); the vertical gap is the estimated effect. Outside the shaded overlap band, each function is an extrapolation for one group. At `x = 12` no control unit is observed, so the untreated counterfactual there comes entirely from the assumed shape.
+
+```{r ch5-model-dependence-plot, fig.width = 10, fig.height = 5}
+# Predicted untreated outcome for treated units at x = 12
+predict(fit_linear_adjustment, newdata = data.frame(D = 0, x = 12))
+predict(fit_quadratic_adjustment, newdata = data.frame(D = 0, x = 12))
+
+# Draw a group's fitted function in black over [from, to],
+# its observed support, and in grey elsewhere (extrapolation)
+draw_fit <- function(fit, d, from, to, lty) {
+  full <- seq(0, 16, length.out = 200)
+  supported <- seq(from, to, length.out = 100)
+  lines(
+    full,
+    predict(fit, newdata = data.frame(D = d, x = full)),
+    col = "grey60",
+    lty = lty
+  )
+  lines(
+    supported,
+    predict(fit, newdata = data.frame(D = d, x = supported)),
+    lwd = 2,
+    lty = lty
+  )
+}
+
+plot_adjustment <- function(fit, title) {
+  plot(
+    causal_dat$x,
+    causal_dat$Y,
+    type = "n",
+    ylim = c(-20, 135),
+    xlab = "Confounder X",
+    ylab = "Outcome Y",
+    main = title
+  )
+  rect(5, -30, 8, 145, col = "grey90", border = NA)
+  points(
+    causal_dat$x,
+    causal_dat$Y,
+    pch = ifelse(causal_dat$D == 1, 19, 1)
+  )
+  draw_fit(fit, d = 0, from = 0, to = 8, lty = 1)    # controls
+  draw_fit(fit, d = 1, from = 5, to = 16, lty = 2)   # treated
+}
+
+par(mfrow = c(1, 2))
+plot_adjustment(fit_linear_adjustment, "Linear adjustment")
+plot_adjustment(fit_quadratic_adjustment, "Quadratic adjustment")
+par(mfrow = c(1, 1))
+```
+
 ## Restrict to the region of common support
 
 ```{r ch5-overlap-restriction}
@@ -1174,6 +1228,48 @@ fit_rct_quadratic <- lm(Y ~ D + x + I(x^2), data = rct_dat)
 coef(fit_rct_simple)["D"]
 coef(fit_rct_linear)["D"]
 coef(fit_rct_quadratic)["D"]
+```
+
+The linear adjustment is as misspecified here as in the observational study, yet it returns exactly 6. Both groups occupy the same values of `x`, so they share the same misfit and it cancels from the comparison.
+
+```{r ch5-balanced-rct-plot}
+x_grid <- seq(0, 16, length.out = 200)
+
+plot(
+  rct_dat$x,
+  rct_dat$Y,
+  pch = ifelse(rct_dat$D == 1, 19, 1),
+  ylim = c(-20, 135),
+  xlab = "Pretreatment covariate X",
+  ylab = "Observed outcome Y",
+  main = "A Balanced Randomized Design"
+)
+
+lines(
+  x_grid,
+  predict(fit_rct_linear, newdata = data.frame(D = 0, x = x_grid)),
+  lwd = 2
+)
+lines(
+  x_grid,
+  predict(fit_rct_linear, newdata = data.frame(D = 1, x = x_grid)),
+  lwd = 2,
+  lty = 2
+)
+
+legend(
+  "topleft",
+  legend = c(
+    "Control",
+    "Treated",
+    "Linear adjustment, control",
+    "Linear adjustment, treated"
+  ),
+  pch = c(1, 19, NA, NA),
+  lty = c(NA, NA, 1, 2),
+  lwd = c(NA, NA, 2, 2),
+  bty = "n"
+)
 ```
 
 # Suggested experiments for students

@@ -52,9 +52,20 @@
 \newcommand{\E}{\mathbb{E}}
 \newcommand{\Var}{\operatorname{Var}}
 \newcommand{\MSE}{\operatorname{MSE}}
+
+% Chapter 5's constructed observational dataset: Y(0) = 5 + x + 0.4x^2 + noise,
+% noise in {-1, 0, 1}; controls at x = 0..8, treated at x = 5..16 with effect 6.
+\newcommand{\overlapdatapoints}{%
+  \addplot[only marks,mark=o,mark size=1.6pt,domain=0:8,samples=9] {5 + x + 0.4*x^2};
+  \addplot[only marks,mark=o,mark size=1.6pt,domain=0:8,samples=9,forget plot] {4 + x + 0.4*x^2};
+  \addplot[only marks,mark=o,mark size=1.6pt,domain=0:8,samples=9,forget plot] {6 + x + 0.4*x^2};
+  \addplot[only marks,mark=*,mark size=1.6pt,domain=5:16,samples=12] {11 + x + 0.4*x^2};
+  \addplot[only marks,mark=*,mark size=1.6pt,domain=5:16,samples=12,forget plot] {10 + x + 0.4*x^2};
+  \addplot[only marks,mark=*,mark size=1.6pt,domain=5:16,samples=12,forget plot] {12 + x + 0.4*x^2};
+}
 \title{\textbf{Regression Analysis: Prediction, Foundations, and Inference}}
 \author{Alexis Diamond, PhD\\[4pt] {\normalsize (assisted by Claude and ChatGPT)}}
-\date{Version 0.9 --- August 26, 2026}
+\date{Version 0.9.1 --- September 28, 2026}
 
 \begin{document}
 \maketitle
@@ -4306,6 +4317,33 @@ Y <- c(Y0_control,
 causal_dat <- data.frame(Y, D, x)
 \end{lstlisting}
 
+Figure~\ref{fig:overlap_data} plots these data. The controls occupy the left of the picture and the treated units the right; only the shaded band, \(5\leq X\leq 8\), contains both. Any treated-versus-control comparison made outside that band must be supplied by a model rather than by the data.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.88\textwidth,
+    height=0.52\textwidth,
+    xlabel={Confounder \(X\)},
+    ylabel={Observed outcome \(Y\)},
+    xmin=-0.5, xmax=16.5,
+    ymin=0, ymax=135,
+    legend entries={Control (\(D=0\)), Treated (\(D=1\))},
+    legend style={at={(0.5,-0.20)},anchor=north,legend columns=2,legend cell align=left,/tikz/every even column/.append style={column sep=1.5em}},
+    grid=major
+]
+\fill[gray!18] (axis cs:5,0) rectangle (axis cs:8,135);
+\overlapdatapoints
+\node[font=\small] at (axis cs:2.5,122) {controls only};
+\node[font=\small] at (axis cs:6.5,122) {overlap};
+\node[font=\small] at (axis cs:11.5,122) {treated only};
+\end{axis}
+\end{tikzpicture}
+\caption{The constructed observational study. Treatment status is strongly related to the confounder \(X\), and the two groups share support only in the shaded band \(5\leq X\leq 8\).}
+\label{fig:overlap_data}
+\end{figure}
+
 Now fit two regression adjustments. The first incorrectly forces the outcome relationship with \(X\) to be linear. The second permits the quadratic relationship that generated the data:
 
 \begin{lstlisting}
@@ -4326,6 +4364,104 @@ coef(fit_quadratic_adjustment)["D"]
 The true treatment effect in this constructed example is 6. Yet using all observations, the misspecified linear adjustment estimates a treatment coefficient of only about 1.19, while the correctly specified quadratic regression returns 6.
 
 Nothing went wrong with OLS as an optimization algorithm. The linear regression found the best-fitting plane available within its restricted model class. The problem is causal: because treatment status and \(X\) occupy substantially different regions, the fitted functional form is being asked to determine counterfactual comparisons where direct treated-control evidence is weak or absent.
+
+Figure~\ref{fig:model_dependence} shows the two fits on the same data. Each adjustment draws one fitted outcome function for controls and a parallel one for treated units; the vertical gap between them is the estimated treatment effect. Forced to use straight lines, the linear adjustment must pass a single slope through two groups that sit on different stretches of a curve, and the resulting lines are only \(1.19\) apart. The quadratic adjustment can follow the curvature, and its gap is the true effect.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.49\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\linewidth,
+    height=0.95\linewidth,
+    title={Linear adjustment: \(\widehat{\tau}\approx1.19\)},
+    title style={font=\small},
+    xlabel={Confounder \(X\)},
+    ylabel={Outcome \(Y\)},
+    label style={font=\small},
+    tick label style={font=\footnotesize},
+    xmin=-0.5, xmax=16.5,
+    ymin=-20, ymax=135,
+    grid=major
+]
+\fill[gray!18] (axis cs:5,-20) rectangle (axis cs:8,135);
+\overlapdatapoints
+\addplot[thick, domain=0:8, samples=2] {-13.3855 + 7.8631*x};
+\addplot[thin, gray, domain=8:16, samples=2] {-13.3855 + 7.8631*x};
+\addplot[thick, dashed, domain=5:16, samples=2] {-12.1954 + 7.8631*x};
+\addplot[thin, gray, dashed, domain=0:5, samples=2] {-12.1954 + 7.8631*x};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}{0.49\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\linewidth,
+    height=0.95\linewidth,
+    title={Quadratic adjustment: \(\widehat{\tau}=6\)},
+    title style={font=\small},
+    xlabel={Confounder \(X\)},
+    ylabel={Outcome \(Y\)},
+    label style={font=\small},
+    tick label style={font=\footnotesize},
+    xmin=-0.5, xmax=16.5,
+    ymin=-20, ymax=135,
+    grid=major
+]
+\fill[gray!18] (axis cs:5,-20) rectangle (axis cs:8,135);
+\overlapdatapoints
+\addplot[thick, domain=0:8, samples=30] {5 + x + 0.4*x^2};
+\addplot[thin, gray, domain=8:16, samples=30] {5 + x + 0.4*x^2};
+\addplot[thick, dashed, domain=5:16, samples=40] {11 + x + 0.4*x^2};
+\addplot[thin, gray, dashed, domain=0:5, samples=20] {11 + x + 0.4*x^2};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\caption{The same data under two regression adjustments. Solid lines are the fitted outcome function for controls (\(D=0\)), dashed lines for treated units (\(D=1\)); open circles are controls, filled circles treated units, and the shaded band is the region of overlap. Each fitted function is drawn in black across its own group's observed support and in thin gray where it extrapolates beyond it. Outside the band, one of the two functions is always gray, so the gap between them---the estimated effect---is largely a product of the assumed shape.}
+\label{fig:model_dependence}
+\end{figure}
+
+The consequences are easiest to see for a single treated unit. At \(X=12\) the treated units' observed outcomes average \(80.6\). To estimate their treatment effect, we need their untreated counterfactual---but no control unit lies anywhere near \(X=12\); the control data end at \(X=8\). The linear adjustment extends its control line and predicts an untreated outcome of about \(81.0\), which leaves no treatment effect at all for these units. The quadratic adjustment predicts \(74.6\), the true untreated mean. The two models agree reasonably well where controls were observed and disagree where they were not, and it is exactly there that the counterfactual is needed.
+
+The figure and these counterfactual predictions can be reproduced in base R:
+
+\begin{lstlisting}
+# Predicted untreated outcome for treated units at x = 12
+predict(fit_linear_adjustment, newdata = data.frame(D = 0, x = 12))
+predict(fit_quadratic_adjustment, newdata = data.frame(D = 0, x = 12))
+
+# Draw a group's fitted function in black over [from, to],
+# its observed support, and in grey elsewhere (extrapolation)
+draw_fit <- function(fit, d, from, to, lty) {
+  full <- seq(0, 16, length.out = 200)
+  supported <- seq(from, to, length.out = 100)
+  lines(full, predict(fit, newdata = data.frame(D = d, x = full)),
+        col = "grey60", lty = lty)
+  lines(supported,
+        predict(fit, newdata = data.frame(D = d, x = supported)),
+        lwd = 2, lty = lty)
+}
+
+plot_adjustment <- function(fit, title) {
+  plot(causal_dat$x, causal_dat$Y,
+       type = "n", ylim = c(-20, 135),
+       xlab = "Confounder X", ylab = "Outcome Y",
+       main = title)
+  # Shade the region of overlap, then draw the data over it
+  rect(5, -30, 8, 145, col = "grey90", border = NA)
+  points(causal_dat$x, causal_dat$Y,
+         pch = ifelse(causal_dat$D == 1, 19, 1))
+  draw_fit(fit, d = 0, from = 0, to = 8, lty = 1)    # controls
+  draw_fit(fit, d = 1, from = 5, to = 16, lty = 2)   # treated
+}
+
+par(mfrow = c(1, 2))
+plot_adjustment(fit_linear_adjustment, "Linear adjustment")
+plot_adjustment(fit_quadratic_adjustment, "Quadratic adjustment")
+par(mfrow = c(1, 1))
+\end{lstlisting}
 
 \section{Restricting Attention to Overlap Reduces Model Dependence}
 \index{trimming}\index{common support!restriction}
@@ -4362,7 +4498,7 @@ The tradeoff is equally important: trimming away unsupported observations change
 
 \subsection{Visualizing the support problem in base R}
 
-The following plot makes the overlap structure visible:
+The following base-R code reproduces Figure~\ref{fig:overlap_data}:
 
 \begin{lstlisting}
 plot(
@@ -4416,6 +4552,89 @@ Y_i=\beta_0+\tau D_i+\varepsilon_i.
 The strength of the experiment does not come from the sophistication of this regression. It comes from the research design that makes the treated-control comparison credible.
 
 Randomization also tends to produce overlap in pretreatment covariates because treated and control units are sampled, through the assignment mechanism, from the same underlying pool of study units. In a finite sample, especially a small one, exact balance is not guaranteed. But systematic separation of the sort produced by strong confounding is not built into the assignment process.
+
+The constructed example makes the contrast concrete. Keep the same untreated outcome function and the same treatment effect of 6, but now suppose every value \(X=0,1,\ldots,16\) contains three treated and three control units, as a perfectly balanced randomized design would produce:
+
+\begin{lstlisting}
+x <- rep(0:16, each = 6)
+D <- rep(c(0, 0, 0, 1, 1, 1), times = 17)
+noise <- rep(c(-1, 0, 1, -1, 0, 1), times = 17)
+
+Y0 <- 5 + x + 0.4 * x^2 + noise
+Y <- Y0 + 6 * D
+
+rct_dat <- data.frame(Y, D, x)
+
+fit_rct_simple <- lm(Y ~ D, data = rct_dat)
+fit_rct_linear <- lm(Y ~ D + x, data = rct_dat)
+fit_rct_quadratic <- lm(Y ~ D + x + I(x^2), data = rct_dat)
+
+coef(fit_rct_simple)["D"]
+coef(fit_rct_linear)["D"]
+coef(fit_rct_quadratic)["D"]
+\end{lstlisting}
+
+All three regressions return exactly 6. That includes the linear adjustment, which is just as misspecified here as it was in the observational study. Figure~\ref{fig:rct_balance} shows why the misspecification no longer matters. The straight lines still miss the curvature badly, but because treated and control units occupy the same values of \(X\), both groups suffer the same misfit, and it cancels out of the comparison between them.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.88\textwidth,
+    height=0.52\textwidth,
+    xlabel={Pretreatment covariate \(X\)},
+    ylabel={Observed outcome \(Y\)},
+    xmin=-0.5, xmax=16.5,
+    ymin=-20, ymax=135,
+    legend style={at={(0.5,-0.20)},anchor=north,legend columns=2,legend cell align=left,/tikz/every even column/.append style={column sep=1.5em}},
+    grid=major
+]
+\addplot[only marks,mark=o,mark size=1.6pt,domain=0:16,samples=17] {5 + x + 0.4*x^2};
+\addlegendentry{Control (\(D=0\))}
+\addplot[only marks,mark=o,mark size=1.6pt,domain=0:16,samples=17,forget plot] {4 + x + 0.4*x^2};
+\addplot[only marks,mark=o,mark size=1.6pt,domain=0:16,samples=17,forget plot] {6 + x + 0.4*x^2};
+\addplot[only marks,mark=*,mark size=1.6pt,domain=0:16,samples=17] {11 + x + 0.4*x^2};
+\addlegendentry{Treated (\(D=1\))}
+\addplot[only marks,mark=*,mark size=1.6pt,domain=0:16,samples=17,forget plot] {10 + x + 0.4*x^2};
+\addplot[only marks,mark=*,mark size=1.6pt,domain=0:16,samples=17,forget plot] {12 + x + 0.4*x^2};
+\addplot[thick, domain=0:16, samples=2] {-11 + 7.4*x};
+\addlegendentry{Linear adjustment, control}
+\addplot[thick, dashed, domain=0:16, samples=2] {-5 + 7.4*x};
+\addlegendentry{Linear adjustment, treated}
+\end{axis}
+\end{tikzpicture}
+\caption{A perfectly balanced randomized design with the same outcome functions as Figure~\ref{fig:model_dependence}. The linear adjustment is still misspecified, but treated and control units share the same support, so the misfit is common to both groups and the gap between the lines is the true effect, 6. Compare the left panel of Figure~\ref{fig:model_dependence}.}
+\label{fig:rct_balance}
+\end{figure}
+
+The corresponding base-R graph:
+
+\begin{lstlisting}
+x_grid <- seq(0, 16, length.out = 200)
+
+plot(rct_dat$x, rct_dat$Y,
+     pch = ifelse(rct_dat$D == 1, 19, 1),
+     ylim = c(-20, 135),
+     xlab = "Pretreatment covariate X",
+     ylab = "Observed outcome Y",
+     main = "A Balanced Randomized Design")
+
+lines(x_grid,
+      predict(fit_rct_linear, newdata = data.frame(D = 0, x = x_grid)),
+      lwd = 2)
+lines(x_grid,
+      predict(fit_rct_linear, newdata = data.frame(D = 1, x = x_grid)),
+      lwd = 2, lty = 2)
+
+legend("topleft",
+       legend = c("Control", "Treated",
+                  "Linear adjustment, control",
+                  "Linear adjustment, treated"),
+       pch = c(1, 19, NA, NA),
+       lty = c(NA, NA, 1, 2),
+       lwd = c(NA, NA, 2, 2),
+       bty = "n")
+\end{lstlisting}
 
 This is why a useful contrast is:
 
