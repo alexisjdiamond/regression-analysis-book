@@ -65,7 +65,7 @@
 }
 \title{\textbf{Regression Analysis: Prediction, Foundations, and Inference}}
 \author{Alexis Diamond, PhD\\[4pt] {\normalsize (assisted by Claude and ChatGPT)}}
-\date{Version 0.9.1 --- September 28, 2026}
+\date{Version 0.9.2 --- September 29, 2026}
 
 \begin{document}
 \maketitle
@@ -836,6 +836,8 @@ The \(p\)-value asks how surprising a test statistic at least this incompatible 
 
 A small \(p\)-value therefore says that the observed estimate is difficult to reconcile with the particular null hypothesis under the assumed statistical model. It does \emph{not} mean that the probability the null hypothesis is true is small. It also does not tell us whether the estimated quantity is substantively important.\footnote{\emph{Substantive importance} means importance in the real scientific, policy, practical, or decision context, rather than merely statistical detectability. A coefficient can be estimated very precisely and have a tiny \(p\)-value while still being too small to matter in practice.}
 
+It also helps to be exact about which claim is being tested. The null hypothesis concerns the \emph{population} coefficient: the slope we would obtain by running the same regression on the entire population, which Chapter~\ref{chap:intervals_multiple} calls the population linear projection. With a single predictor, that slope is zero exactly when the population correlation between \(X\) and \(Y\) is zero, so a small \(p\)-value is evidence of a nonzero correlation. With several predictors, it is evidence of a nonzero \emph{partial association}, a subtler quantity developed in Section~\ref{sec:partial_association}. Either way, the \(p\)-value is a statement about the coefficient in \emph{this} regression, with \emph{these} predictors included. It says nothing directly about the coefficient on the same variable in a regression with different predictors.
+
 For the \texttt{cars} regression, the slope is about \(3.932\), its conventional standard error is about \(0.416\), and the resulting \(t\)-statistic is about \(9.46\). The conventional two-sided \(p\)-value is extremely small.
 
 \subsection{What is a confidence interval for a regression coefficient?}
@@ -947,6 +949,20 @@ In a one-predictor model, this means that the true conditional mean is adequatel
 The conventional textbook variance formula also assumes a suitable error structure.\footnote{By \emph{error structure}, we mean features of the unexplained variation around the conditional mean that matter for uncertainty calculations---especially its variance and any dependence across observations. For example, errors may have different variances in different parts of the predictor space, or observations from the same school, household, firm, or time series may have correlated errors.} In its simplest form, this includes constant conditional error variance (homoskedasticity) and an independence structure appropriate to the sampling process. Exact small-sample \(t\) inference additionally relies on normal-error assumptions; large-sample approximations can relax normality substantially. Other data structures---for example clustered, serially correlated, or heteroskedastic observations---require uncertainty procedures designed for those structures.
 
 Some assumption failures can be handled with robust methods.\footnote{\emph{Robust} does not mean assumption-free. A robust procedure is designed to remain valid when a particular assumption is relaxed or violated. Heteroskedasticity-robust standard errors, for example, relax the constant-variance assumption, but they still require other conditions for their large-sample justification.} Heteroskedasticity-robust standard errors, for example, are designed precisely so that heteroskedasticity need not invalidate large-sample coefficient inference under appropriate conditions. The general principle is therefore not that every statistical model must be literally perfect. It is that the assumptions required by the particular confidence procedure, for the particular estimand\footnote{An \emph{estimand} is the population quantity an analysis is trying to learn about---for example, a regression slope, a conditional mean at a specified value of \(X\), or an average treatment effect. The \emph{estimator} is the rule used to estimate that quantity from data; the \emph{estimate} is the numerical result obtained in one sample.} we claim to be covering, must be adequate. If they are not, the nominal \(95\%\) label does not guarantee \(95\%\) coverage.
+
+\subsection{Standard errors for unequal spread and for dependent observations}
+\label{sec:robust_clustered}
+\index{robust standard errors}\index{clustered standard errors}\index{heteroskedasticity}
+
+Every \(p\)-value and confidence interval for a coefficient is computed from the coefficient's standard error, so each inherits whatever the standard error gets wrong. Two departures from the textbook variance formula are common enough to deserve names, and they call for different repairs.
+
+\emph{Unequal spread.} When the spread of the outcome around the regression function differs across values of the predictors---\emph{heteroskedasticity}---the textbook formula, which assumes constant spread, can report standard errors that are too small or too large. This is especially common when the model is misspecified: a straight line fitted to a curved relationship leaves larger errors where the curve departs most from the line. Heteroskedasticity-robust standard errors repair this problem, and only this problem.
+
+\emph{Dependent observations.} Robust standard errors still assume that each observation is independent of the others. Real data often violate that assumption: students in the same school, patients in the same hospital, the same firm observed over several years, neighboring regions. Observations that share a context tend to share unexplained variation, so the data contain less independent information than the sample size suggests, and standard errors that ignore the dependence are usually too small---sometimes much too small. The usual repair is \emph{clustered} standard errors, which allow observations within analyst-specified groups to be related to one another. Clustered standard errors also allow unequal spread, so they already include the robust correction; the two are not applied together. Related procedures exist for dependence over time and across space.
+
+The repair works only if the dependence structure is right. The clusters must match how observations are actually related. Cluster at the wrong level---by classroom when the dependence runs through whole schools, say---and the remaining dependence goes uncorrected while the output \emph{looks} corrected. With too few clusters, roughly fewer than 30 to 50, clustered standard errors themselves become unreliable and are often too small.\footnote{A. Colin Cameron and Douglas L. Miller, ``A Practitioner's Guide to Cluster-Robust Inference,'' \emph{Journal of Human Resources} 50, no.~2 (2015): 317--372.} A wrongly specified dependence structure does not merely fail to help. It produces unreliable standard errors presented with false confidence.
+
+All of this presumes, finally, that the data represent a well-defined population. A standard error describes variation across repeated samples from some population. If it is unclear what population the data were drawn from, or the data are unrepresentative of the population we want to describe, even a correctly computed \(p\)-value answers a question about the wrong group.
 
 \subsection{Why ``properly specified'' is hard to know in real research}
 
@@ -2390,6 +2406,48 @@ This is one reason multiple regression is often described as ``adjusting for'' o
 
 But the phrase ``control for'' does not, by itself, justify a causal interpretation.
 
+\section{What ``Holding Fixed'' Means Inside OLS: Partial Association}
+\label{sec:partial_association}
+\index{partial association}\index{Frisch--Waugh--Lovell theorem}
+
+The phrase ``holding \(Z\) fixed'' describes how the fitted equation generates predictions. There is a second, equally exact description of what a multiple-regression coefficient measures, and it explains why that coefficient can behave so differently from the simple relationship between \(X\) and \(Y\).
+
+The coefficient on \(X\) in the regression of \(Y\) on \(X\) and \(Z\) can be obtained in two steps:
+
+\begin{enumerate}
+    \item Regress \(X\) on \(Z\) and keep the residuals: the part of \(X\) that \(Z\) cannot linearly predict.
+    \item Regress \(Y\) on those residuals.
+\end{enumerate}
+
+The slope from the second step is exactly the coefficient on \(X\) in the full regression. This result is known as the Frisch--Waugh--Lovell theorem.\footnote{Ragnar Frisch and Frederick V. Waugh, ``Partial Time Regressions as Compared with Individual Trends,'' \emph{Econometrica} 1, no.~4 (1933): 387--401; Michael C. Lovell, ``Seasonal Adjustment of Economic Time Series and Multiple Regression Analysis,'' \emph{Journal of the American Statistical Association} 58, no.~304 (1963): 993--1010.} With several other predictors, the first step regresses \(X\) on all of them together.
+
+So the coefficient measures how \(Y\) moves with \emph{the part of \(X\) that the other predictors cannot linearly predict}. With a single predictor, the population slope is zero exactly when the population correlation between \(X\) and \(Y\) is zero. With several, the coefficient describes this \emph{partial association}, sometimes loosely called a conditional correlation.
+
+The \texttt{mtcars} example shows the two-step construction at work:
+
+\begin{lstlisting}
+fit_simple <- lm(mpg ~ am, data = mtcars)
+fit_multiple <- lm(mpg ~ wt + am, data = mtcars)
+
+# Step 1: the part of am that weight cannot linearly predict
+am_resid <- resid(lm(am ~ wt, data = mtcars))
+
+# Step 2: regress mpg on that leftover part
+fit_partial <- lm(mpg ~ am_resid, data = mtcars)
+
+coef(fit_simple)["am"]
+coef(fit_multiple)["am"]
+coef(fit_partial)["am_resid"]
+\end{lstlisting}
+
+The simple coefficient is about \(7.24\). The multiple-regression coefficient and the two-step slope are both \(-0.024\), identical to every printed digit. Transmission and weight are strongly related in these data---their correlation is \(-0.69\), and weight alone linearly predicts about \(48\%\) of the variation in \texttt{am}---so the leftover part of \texttt{am} is quite a different variable from \texttt{am} itself. The partial association between \texttt{mpg} and that leftover part is essentially zero, and here it even has the opposite sign from the simple relationship.
+
+Two cautions follow.
+
+First, partial association is much harder to grasp than correlation. It cannot be seen in a scatterplot of \(Y\) against \(X\), because it is a relationship between \(Y\) and a \emph{constructed} variable, and what that constructed variable represents depends on which other predictors happen to be included. Change the other predictors and the leftover part of \(X\) changes, and so does the coefficient.
+
+Second, including \(Z\) in a regression is not the same as comparing only units that share the same value of \(Z\). The first step removes only the straight-line part of the relationship between \(X\) and \(Z\). If that relationship is curved, part of the association between \(X\) and \(Z\) survives in the residuals, and the coefficient on \(X\) still partly reflects differences in \(Z\). Comparing units with genuinely equal values of \(Z\)---what matching and subclassification attempt in Chapter~\ref{chap:causal_bridge}---is a different operation.
+
 \section{A Multiple-Regression Coefficient Is Not Automatically a Causal Effect}
 
 Suppose we fit
@@ -2438,6 +2496,24 @@ Standard algebra tells us what \(\beta_1\) actually is. Let \(\delta_1\) be the 
 \]
 The second term is the classic \emph{omitted variable bias}. It is nonzero whenever \(Z\) both affects \(Y\) \((\alpha_2\neq 0)\) and is related to \(X\) \((\delta_1\neq 0)\) --- which is exactly what it means for \(Z\) to be a confounder. So \(\beta_1\neq\alpha_1\), and our estimator is not aimed at the causal effect.
 
+Real applications rarely omit just one variable. With several omitted variables \(Z_1,\ldots,Z_J\), the same algebra gives
+\[
+\beta_{\text{short}}
+=
+\beta_{\text{long}}
++
+\sum_{j=1}^{J}\gamma_j\,\delta_j ,
+\]
+where \(\beta_{\text{long}}\) is the coefficient on \(X\) in the \emph{long} regression that also includes every \(Z_j\), \(\gamma_j\) is \(Z_j\)'s coefficient in that long regression, and \(\delta_j\) is the slope from regressing \(Z_j\) on \(X\) (together with any other predictors in the short regression). With a single omitted variable this is exactly the formula above: \(\beta_{\text{short}}=\beta_1\), \(\beta_{\text{long}}=\alpha_1\), and \(\gamma_1=\alpha_2\). This is an algebraic identity, true whether or not anything is causal, and three consequences follow from it.
+
+\begin{itemize}[leftmargin=2em]
+\item The terms can be positive or negative, so omitted variables can offset one another or compound.
+\item \(\beta_{\text{long}}\) is itself just another regression coefficient. It equals the causal effect of \(X\) only if the long regression includes every confounder and is otherwise correctly specified, including its functional form. Only then is the sum exactly the omitted variable bias.
+\item An analyst who does not know how many omitted variables there are, or their \(\gamma_j\) and \(\delta_j\), cannot learn from the regression the size of the gap between the reported coefficient and the causal effect---or even its sign.
+\end{itemize}
+
+Nor can the data settle the matter. A missing confounder is, by definition, not in the data, so the data cannot reveal it. Whether the conditions for a causal reading hold depends on how \(X\) came to take the values it did, and that must be learned from outside the dataset.
+
 \subsection{The interval is not broken; it is aimed elsewhere}
 
 Here is the key point. The confidence interval is not malfunctioning. It is doing its job accurately --- for a different target than the one we may have had in mind.
@@ -2445,6 +2521,8 @@ Here is the key point. The confidence interval is not malfunctioning. It is doin
 The quantity \(\beta_1\) is not a fiction, and it is not merely ``the biased version of \(\alpha_1\).'' It is a well-defined feature of the population in its own right: the slope of the best linear predictor of \(Y\) using \(X\) alone, sometimes called the \emph{population linear projection} of \(Y\) on \(X\). This object exists whether or not any linear model is ``true,'' because it is defined by a minimization --- the line that minimizes expected squared error in the population --- rather than by a claim about how the world works. OLS remains a consistent estimator of it under misspecification, and heteroskedasticity-robust standard errors deliver asymptotically valid inference for it.\footnote{This is why robust standard errors are the conventional default in this setting. Once we admit that the conditional mean is not literally linear, the homoskedastic textbook variance formula loses its justification, whereas the sandwich formula remains valid for the projection coefficient under mild conditions.} Under those conditions, the reported interval covers \(\beta_1\) about \(95\%\) of the time, exactly as advertised.
 
 And \(\beta_1\) often answers a question someone genuinely wants answered. In words, it says: among units that differ in \(X\) by one unit, how much does average \(Y\) differ, \emph{without} adjusting for \(Z\)? That is a real and frequently important quantity. Unadjusted differences in wages across groups, raw disparities in health outcomes, the predictive value of a variable that a decision-maker will actually observe in practice, a descriptive summary of an association, a forecasting rule --- all of these are legitimately about \(\beta_1\), not \(\alpha_1\). A hospital deciding whom to screen may care what an available predictor predicts, not what it causes. Reporting a confidence interval for such a quantity is honest and useful work.
+
+The most common of these uses is prediction, and prediction carries a condition of its own: the units being predicted must come from the same process that generated the data used to fit the model. If that process shifts---a different country, a different decade, a policy that changes who receives \(X\)---the association can change even if the causal relationship does not. For prediction, moreover, the coefficient itself is rarely the object of interest. What matters is how accurate the predictions are.
 
 \subsection{As an interval for the causal effect, it is worse than useless}
 
@@ -2473,6 +2551,21 @@ None of these is more correct in the abstract. Each targets a different estimand
 That obligation is what makes the difference between defensible and indefensible practice here, and the gap between them is entirely verbal. Writing ``\(95\%\) confidence interval for the unadjusted association between \(X\) and \(Y\)'' is accurate, useful, and the interval genuinely supports it. Writing ``\(95\%\) confidence interval for the effect of \(X\) on \(Y\)'' is not supported, and the numbers printed on the page are exactly the same in both cases. The statistics cannot tell these apart. Only the analyst can.
 
 This is also why the causal work in Chapter~\ref{chap:causal_bridge} is done by design --- randomization, overlap, and comparability --- rather than by tightening a confidence interval. Sampling uncertainty and identification are separate problems, and the confidence interval addresses only the first.
+
+\subsection{So what is a single coefficient good for?}
+\index{Table 2 fallacy}
+
+Put these facts together and a sobering conclusion follows for the most common kind of regression in applied work: an observational regression with five or ten controls and an unknown number of missing confounders. In such a regression, a single coefficient is hard to justify as a finding on its own.
+
+\begin{itemize}[leftmargin=2em]
+\item \textbf{As description, it answers a question nobody asked.} It is the partial association between \(Y\) and the part of \(X\) that the controls cannot linearly predict (Section~\ref{sec:partial_association}). Change the controls and the coefficient changes. And the controls were usually chosen to approximate a causal adjustment, not to define a descriptive quantity of independent interest.
+\item \textbf{As a causal estimate, its error is unknown} in both size and sign, for the reasons just given.
+\item \textbf{The controls' own coefficients are even harder to interpret.} Each is adjusted for \(X\) and for every other control, and usually has no clear meaning of its own. Reading them as causal effects---tempting, because they sit in the same table as the coefficient of interest---is known in epidemiology as the \emph{Table 2 fallacy}.\footnote{Daniel Westreich and Sander Greenland, ``The Table 2 Fallacy: Presenting and Interpreting Confounder and Modifier Coefficients,'' \emph{American Journal of Epidemiology} 177, no.~4 (2013): 292--298.}
+\end{itemize}
+
+The coefficient still has two legitimate non-causal uses. It can support \emph{prediction}, provided future data come from the same process as the data used to fit the model. And it can \emph{test an implication of a theory}: if a theory says a particular partial association must be zero, a clear rejection counts against the theory, though it does not establish a causal effect.
+
+A causal reading requires a justification that comes from outside the regression output. Section~\ref{sec:causal_reading} collects the main forms such a justification can take. Without one, a single coefficient from an observational regression is best treated as the start of an argument about confounding, not as a result.
 
 \section{``Holding Fixed'' Can Also Require Extrapolation}
 
@@ -4687,6 +4780,24 @@ This provides a useful way to think about the division of labor between design a
 
 When the design succeeds in creating strong comparability, several reasonable regression specifications should often tell broadly similar causal stories. When small changes in functional form produce radically different estimated effects, that sensitivity can be a warning that the data are asking the model to do too much.
 
+\section{When Can a Coefficient Be Read Causally?}
+\label{sec:causal_reading}
+\index{causal interpretation}\index{sensitivity analysis}\index{assignment rule}
+
+Chapter~\ref{chap:intervals_multiple} concluded that an observational regression coefficient cannot certify its own causal meaning: the size and sign of omitted variable bias cannot be learned from the regression alone. This chapter has shown what can supply the missing justification. It is worth collecting the main routes in one place, because they all work the same way. Omitting a variable biases the coefficient only if that variable is related to \(X\) and also predicts \(Y\) given \(X\); each route gives a reason, from outside the regression output, to rule that combination out.
+
+\begin{enumerate}
+    \item \textbf{Random assignment.} If \(X\) was assigned at random, no pretreatment variable can be systematically related to it, so omitting such variables does not bias the coefficient, and controls mainly improve precision. Two refinements matter. Variables measured \emph{after} treatment are not protected by randomization---the treatment can change them---so they should not be added as controls. And if \(X\) was randomized within groups, such as strata or blocks with different assignment probabilities, the groups must be controlled for. If the effect then differs across groups, OLS returns a weighted average of the group-specific effects that gives more weight to groups in which \(X\) varies more, not their simple average.
+
+    \item \textbf{A known assignment rule.} If \(X\) was assigned by a known rule based on recorded variables---admission by test score, eligibility by an income threshold---those variables are the only route by which confounding can enter, and controlling for them correctly can be enough. \emph{Correctly} includes the functional form: as the model-dependence example earlier in this chapter showed, adjusting for the right variable in the wrong shape can still badly misstate the effect.
+
+    \item \textbf{Sensitivity analysis.} When neither randomization nor a known rule is available, sensitivity analysis asks how strong an omitted confounder would have to be to erase the estimate. Tools such as the R package \texttt{sensemakr} express that strength relative to the variables actually measured.\footnote{Carlos Cinelli and Chad Hazlett, ``Making Sense of Sensitivity: Extending Omitted Variable Bias,'' \emph{Journal of the Royal Statistical Society: Series B (Statistical Methodology)} 82, no.~1 (2020): 39--67.} If the confounder would have to be implausibly strong---stronger, say, than the most important variable measured---a causal reading may be defensible.
+
+    \item \textbf{Strong outside knowledge of how the data were generated.} If subject-matter knowledge establishes which variables are related to both \(X\) and \(Y\), and the shapes of those relationships, and all of them are measured and correctly modeled, the coefficient can be read causally, even if many variables related only to \(X\) or only to \(Y\) are left out.
+\end{enumerate}
+
+In every case the justification comes from how the data were produced, or from an explicit argument about what is missing---never from the regression output itself. That is the sense in which good design reduces the work the regression must do.
+
 \section{The Main Connection to Regression Analysis}
 
 The point of this chapter is not that every regression should be interpreted causally. Most should not be unless the research design and assumptions justify doing so.
@@ -4732,7 +4843,7 @@ Every fitted regression optimizes an objective. OLS minimizes the sum of squared
 
 Regression coefficients are instructions for how the prediction changes. With a single binary predictor, OLS produces a particularly simple result: the intercept is the mean outcome for the group coded zero, and the coefficient on the binary predictor is the difference in mean outcomes between the group coded one and the group coded zero. More generally, the fitted coefficients in an \texttt{lm()} object are exactly the numbers R uses when \texttt{predict()} constructs fitted values for either the original training observations or new cases.
 
-In multiple regression, a coefficient is interpreted conditional on the other included predictors. In an additive model, the coefficient on \(X\) tells us how the fitted prediction changes when \(X\) increases by one unit while the other predictors are kept at fixed values. This is a statement about the fitted prediction function; it is not automatically a causal statement. Whether a regression coefficient can be interpreted causally requires a research design or assumptions that justify the relevant counterfactual comparison.
+In multiple regression, a coefficient is interpreted conditional on the other included predictors. In an additive model, the coefficient on \(X\) tells us how the fitted prediction changes when \(X\) increases by one unit while the other predictors are kept at fixed values. This is a statement about the fitted prediction function; it is not automatically a causal statement. Equivalently, by the Frisch--Waugh--Lovell theorem, the coefficient is the slope of \(Y\) on the part of \(X\) that the other predictors cannot linearly predict: a \emph{partial association}, which can differ from the simple association in size and even in sign, and which is not the same as comparing units with equal values of the other predictors. Whether a regression coefficient can be interpreted causally requires a research design or assumptions that justify the relevant counterfactual comparison.
 
 Interactions change coefficient interpretations. If a continuous predictor \(X\) and a binary group indicator \(D\) enter only additively, the model imposes the same slope on \(X\) in both groups. Adding \(X\times D\) allows the slopes to differ. With an interaction present, there is often no single universal coefficient for \(X\) in the fitted model: the fitted relationship between \(X\) and \(Y\) depends on the value of the interacting variable.
 
@@ -4756,13 +4867,13 @@ These interval types are also not interconvertible by hand. A common temptation 
 
 Likewise, a p-value has a specific inferential meaning. Under a stated null hypothesis and the assumptions used by the test, it measures how unusual the observed test statistic, or something more extreme, would be if the null were true. It is not the probability that the null hypothesis is true. A tiny p-value also does not necessarily imply a tight confidence interval: statistical significance depends partly on the estimate's scale and its distance from the null, whereas interval width depends on uncertainty measured in the units of the coefficient.
 
-Confidence intervals and p-values achieve their nominal repeated-sampling properties only under the assumptions required by the inferential procedure. In textbook OLS, those assumptions concern the conditional mean specification and the error process; exact small-sample t procedures additionally invoke normality. Robust procedures can protect against some forms of misspecification, but no command can make inferential validity assumption-free. In most observational social-science problems, analysts do not know the true data-generating equation. Proper specification is therefore something to investigate and defend, not something to assume merely because software returned standard errors.
+Confidence intervals and p-values achieve their nominal repeated-sampling properties only under the assumptions required by the inferential procedure. In textbook OLS, those assumptions concern the conditional mean specification and the error process; exact small-sample t procedures additionally invoke normality. Robust procedures can protect against some forms of misspecification, but no command can make inferential validity assumption-free. In most observational social-science problems, analysts do not know the true data-generating equation. Proper specification is therefore something to investigate and defend, not something to assume merely because software returned standard errors. Two repairs are standard: heteroskedasticity-robust standard errors for unequal spread, and clustered standard errors for dependence among observations. The second works only if the clusters match the actual dependence structure and there are enough of them, and neither helps if the data do not represent a well-defined population.
 
-A confidence interval can nevertheless remain useful when a model is known to be misspecified, provided its target is named honestly. If a confounder \(Z\) is omitted, the short-regression coefficient is \(\beta_1=\alpha_1+\alpha_2\delta_1\) rather than the causal effect \(\alpha_1\). The interval is not thereby broken: \(\beta_1\) is a well-defined population quantity---the coefficient of the population linear projection of \(Y\) on \(X\) alone---and OLS with robust standard errors supports valid inference about it. Reported as an unadjusted association, a descriptive summary, or the predictive value of an available variable, the interval does real work. Reported as a causal effect, it is worse than useless, because a confidence interval quantifies sampling variability only and is blind to bias from omitted confounders. As the sample grows the interval narrows while the bias does not, so its coverage of the causal effect falls toward zero: more data buys more confident wrongness. Precision is not accuracy, and the arithmetic is identical under either label. A coefficient is therefore always a property of a particular prediction rule fitted to a particular set of variables in a particular functional form---an estimand indexed to a specification---and never simply ``the effect of \(X\).''
+A confidence interval can nevertheless remain useful when a model is known to be misspecified, provided its target is named honestly. If a confounder \(Z\) is omitted, the short-regression coefficient is \(\beta_1=\alpha_1+\alpha_2\delta_1\) rather than the causal effect \(\alpha_1\). The interval is not thereby broken: \(\beta_1\) is a well-defined population quantity---the coefficient of the population linear projection of \(Y\) on \(X\) alone---and OLS with robust standard errors supports valid inference about it. Reported as an unadjusted association, a descriptive summary, or the predictive value of an available variable, the interval does real work. Reported as a causal effect, it is worse than useless, because a confidence interval quantifies sampling variability only and is blind to bias from omitted confounders. As the sample grows the interval narrows while the bias does not, so its coverage of the causal effect falls toward zero: more data buys more confident wrongness. Precision is not accuracy, and the arithmetic is identical under either label. A coefficient is therefore always a property of a particular prediction rule fitted to a particular set of variables in a particular functional form---an estimand indexed to a specification---and never simply ``the effect of \(X\).'' With several omitted variables the gap is a sum of terms whose number, sizes, and signs are all unknown, so the regression alone cannot reveal even the sign of the bias. In a typical observational regression with many controls, a single coefficient is therefore neither a descriptive quantity anyone asked for nor a causal estimate of known error, and the controls' own coefficients are harder still to read.
 
 Functional form deserves the same caution. A linear model, quadratic model, cubic model, and flexible smoother can agree reasonably well where observations are plentiful and diverge where the data provide little guidance. Interpolation is generally safer than extrapolation, but ``inside the observed range'' is not synonymous with ``well supported.'' Interior gaps, sparse regions, and unusual combinations of multiple predictors can make an interpolation heavily dependent on modeling assumptions. Extrapolation goes further by extending the assumed shape beyond the region represented by the data. As nearby empirical support weakens, the functional form does more of the work. Conventional confidence or prediction intervals are usually conditional on the selected functional form and therefore do not automatically capture this model-form uncertainty.
 
-Finally, regression connects to causal inference because causal questions require predictions of missing potential outcomes. Those counterfactual predictions are most credible when treated and control units overlap on relevant pretreatment confounders, so the comparison is anchored by observed data rather than by functional-form extrapolation. Poor overlap increases model dependence: different reasonable specifications can imply different counterfactuals. Randomized experiments are powerful precisely because the assignment design makes treated and control groups comparable in expectation, allowing the basic causal contrast to be identified with little dependence on an outcome-regression specification. Regression can still improve precision, but good design reduces the causal work the model must do.
+Finally, regression connects to causal inference because causal questions require predictions of missing potential outcomes. Those counterfactual predictions are most credible when treated and control units overlap on relevant pretreatment confounders, so the comparison is anchored by observed data rather than by functional-form extrapolation. Poor overlap increases model dependence: different reasonable specifications can imply different counterfactuals. Randomized experiments are powerful precisely because the assignment design makes treated and control groups comparable in expectation, allowing the basic causal contrast to be identified with little dependence on an outcome-regression specification. Regression can still improve precision, but good design reduces the causal work the model must do. More generally, a causal reading of a coefficient must be justified from outside the regression output: by random assignment, by a known assignment rule on recorded variables, by a convincing sensitivity analysis, or by strong knowledge of how the data were generated.
 
 The overall discipline of regression analysis is therefore to keep several questions separate: What is the prediction target? What loss function is being optimized? What functional form has been imposed? Where does the requested prediction lie relative to the training data? What kind of uncertainty interval is being reported? Which estimand does that interval actually cover? Which assumptions justify its coverage? And, if a causal interpretation is desired, what design or assumptions make the counterfactual prediction credible? Keeping those questions distinct prevents many of the most common conceptual mistakes in regression analysis.
 
@@ -4774,6 +4885,8 @@ The overall discipline of regression analysis is therefore to keep several quest
 
 \begin{description}[style=nextline,leftmargin=0pt,labelindent=0pt,font=\bfseries]
 \item[Additive model] A regression in which predictor contributions enter as separate added terms, without interactions. With a group indicator and a continuous predictor, an additive model imposes the same continuous-predictor slope across groups.\index{additive model}
+
+\item[Clustered standard errors] Standard errors that allow observations within analyst-specified groups, such as schools, hospitals, or firms, to be related to one another. They also allow unequal spread, so they include the heteroskedasticity-robust correction. They are valid only if the clusters match the actual dependence structure and there are enough of them; with fewer than roughly 30 to 50 clusters they are often too small.\index{clustered standard errors}
 
 \item[Coefficient] An estimated parameter that determines how a fitted regression prediction changes as a predictor changes, given the model's functional form and the values of other included predictors.\index{regression coefficient}
 
@@ -4800,6 +4913,8 @@ The overall discipline of regression analysis is therefore to keep several quest
 \item[Fitted value] The model's point prediction \(\widehat{Y}_i\) for an observation's outcome.\index{fitted value}
 
 \item[Functional form] The mathematical shape permitted by a regression specification, such as straight-line, polynomial, logarithmic, or interaction-based relationships.\index{functional form}
+
+\item[Heteroskedasticity-robust standard errors] Standard errors that remain valid in large samples when the spread of the outcome around the regression function differs across predictor values. They repair unequal spread and nothing else; in particular, they still assume independent observations.\index{robust standard errors}
 
 \item[Interaction] A model term, such as \(X\times Z\), that allows the fitted relationship between one predictor and the outcome to depend on the value of another predictor.\index{interaction}
 
@@ -4829,6 +4944,8 @@ The overall discipline of regression analysis is therefore to keep several quest
 
 \item[p-value] Under a specified null hypothesis and testing assumptions, the probability of obtaining a test statistic at least as extreme as the observed one if the null were true. It is not the probability that the null is true.\index{p-value}
 
+\item[Partial association] What a multiple-regression coefficient measures: the slope of \(Y\) on the part of \(X\) that the other included predictors cannot linearly predict (the Frisch--Waugh--Lovell theorem). It can differ in size and sign from the simple association, changes whenever the other predictors change, and is not the same as comparing units with equal values of those predictors.\index{partial association}
+
 \item[Population linear projection] The best linear predictor of \(Y\) from a given set of predictors, defined as the linear function minimizing expected squared error in the population. It exists whether or not the conditional mean is truly linear, and it is the estimand that OLS consistently estimates under misspecification. A coefficient is therefore always indexed to a specification, not a property of \(X\) and \(Y\) alone.\index{population linear projection}
 
 \item[Potential outcome] The outcome a unit would experience under a particular treatment or condition. Only one potential outcome is ordinarily observed for a unit, leaving the alternatives counterfactual.\index{potential outcome}
@@ -4845,11 +4962,15 @@ The overall discipline of regression analysis is therefore to keep several quest
 
 \item[Residual] The difference between an observed outcome and its fitted value, \(e_i=Y_i-\widehat{Y}_i\).\index{residual}
 
+\item[Sensitivity analysis] An analysis asking how strong an omitted confounder would have to be to change a conclusion, often expressed relative to the strength of the variables actually measured. A conclusion that survives only implausibly strong confounders may support a cautious causal reading.\index{sensitivity analysis}
+
 \item[Standard error] The estimated standard deviation of an estimator's sampling distribution. The standard errors printed beside regression coefficients are the square roots of the diagonal entries of the variance-covariance matrix, and they say nothing on their own about how the estimates covary.\index{standard error}
 
 \item[Subclassification] A design method that divides the sample into strata (subclasses) of similar covariate values and compares treated and control units within each stratum before aggregating.\index{subclassification}
 
 \item[Support] The region of predictor values or predictor combinations represented in the data. Support is local and, with multiple predictors, multidimensional; checking only each variable's minimum and maximum can conceal sparse or unsupported combinations.\index{support}
+
+\item[Table 2 fallacy] Reading the coefficients on control variables in a regression as causal effects. Each is adjusted for the variable of interest and for every other control, and usually has no clear meaning of its own.\index{Table 2 fallacy}
 
 \item[Test set] Data not used to fit the model, used to assess how well the fitted prediction rule generalizes to new observations.\index{test set}
 

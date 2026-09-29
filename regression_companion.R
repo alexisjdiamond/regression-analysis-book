@@ -551,6 +551,25 @@ legend(
   bty = "n"
 )
 
+# ---- ch3-partial-association ----
+fit_simple <- lm(mpg ~ am, data = mtcars)
+fit_multiple <- lm(mpg ~ wt + am, data = mtcars)
+
+# Step 1: the part of am that weight cannot linearly predict
+am_resid <- resid(lm(am ~ wt, data = mtcars))
+
+# Step 2: regress mpg on that leftover part
+fit_partial <- lm(mpg ~ am_resid, data = mtcars)
+
+coef(fit_simple)["am"]              # about 7.24
+coef(fit_multiple)["am"]            # about -0.024
+coef(fit_partial)["am_resid"]       # identical to the line above
+
+# Transmission and weight are strongly related, so the leftover part
+# of am is quite a different variable from am itself:
+cor(mtcars$am, mtcars$wt)
+summary(lm(am ~ wt, data = mtcars))$r.squared
+
 # ---- ch3-interaction-centering ----
 fit_interaction <- lm(mpg ~ wt * am, data = mtcars)
 summary(fit_interaction)

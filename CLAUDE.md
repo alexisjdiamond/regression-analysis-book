@@ -65,7 +65,7 @@ A change to a worked example usually needs to land in **both** the `.tex` and th
 ## 3. Building
 
 ```bash
-make book        # 4 pdflatex passes + makeindex; ~16s; currently 93 pages
+make book        # 4 pdflatex passes + makeindex; ~16s; currently 98 pages
 make companion   # regenerates the .R, knits the HTML
 make check       # smoke test: the companion script must run end-to-end
 ```

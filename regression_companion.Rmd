@@ -1,8 +1,8 @@
 ---
 title: "Regression Analysis: Companion R Notebook"
-subtitle: "Version 0.9.1"
+subtitle: "Version 0.9.2"
 author: "Alexis Diamond, PhD (assisted by Claude and ChatGPT)"
-date: "September 28, 2026"
+date: "September 29, 2026"
 output: html_document
 editor_options:
   chunk_output_type: console
@@ -675,6 +675,32 @@ legend(
   lwd = c(3, 3),
   bty = "n"
 )
+```
+
+## Partial association: what "holding fixed" means inside OLS
+
+The coefficient on `am` in `mpg ~ wt + am` is the slope of `mpg` on the part of
+`am` that weight cannot linearly predict (the Frisch--Waugh--Lovell theorem).
+Here that partial association has the opposite sign from the simple one.
+
+```{r ch3-partial-association}
+fit_simple <- lm(mpg ~ am, data = mtcars)
+fit_multiple <- lm(mpg ~ wt + am, data = mtcars)
+
+# Step 1: the part of am that weight cannot linearly predict
+am_resid <- resid(lm(am ~ wt, data = mtcars))
+
+# Step 2: regress mpg on that leftover part
+fit_partial <- lm(mpg ~ am_resid, data = mtcars)
+
+coef(fit_simple)["am"]              # about 7.24
+coef(fit_multiple)["am"]            # about -0.024
+coef(fit_partial)["am_resid"]       # identical to the line above
+
+# Transmission and weight are strongly related, so the leftover part
+# of am is quite a different variable from am itself:
+cor(mtcars$am, mtcars$wt)
+summary(lm(am ~ wt, data = mtcars))$r.squared
 ```
 
 ## Interactions and centering
