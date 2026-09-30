@@ -11,7 +11,7 @@
 
 <meta name="author" content="Alexis Diamond, PhD (assisted by Claude and ChatGPT)" />
 
-<meta name="date" content="2026-09-29" />
+<meta name="date" content="2026-09-30" />
 
 <title>Regression Analysis: Companion R Notebook</title>
 
@@ -352,10 +352,10 @@ display: none;
 
 <h1 class="title toc-ignore">Regression Analysis: Companion R
 Notebook</h1>
-<h3 class="subtitle">Version 0.9.2</h3>
+<h3 class="subtitle">Version 0.9.3</h3>
 <h4 class="author">Alexis Diamond, PhD (assisted by Claude and
 ChatGPT)</h4>
-<h4 class="date">September 29, 2026</h4>
+<h4 class="date">September 30, 2026</h4>
 
 </div>
 
@@ -1196,6 +1196,51 @@ cor(mtcars$am, mtcars$wt)</code></pre>
 <pre class="r"><code>summary(lm(am ~ wt, data = mtcars))$r.squared</code></pre>
 <pre><code>## [1] 0.4795497</code></pre>
 </div>
+<div id="the-sign-flip-continued-decomposition-support-and-specification" class="section level2">
+<h2>The sign flip, continued: decomposition, support, and
+specification</h2>
+<p>The omitted-variable identity
+<code>beta_short = beta_long + gamma * delta</code> accounts for the
+entire change from 7.24 to -0.024. The comparison “at equal weight”
+rests on only 17 of the 32 cars, and the coefficient on <code>am</code>
+depends on which controls are included.</p>
+<pre class="r"><code>fit_short &lt;- lm(mpg ~ am, data = mtcars)
+fit_long &lt;- lm(mpg ~ wt + am, data = mtcars)
+
+gamma &lt;- coef(fit_long)[&quot;wt&quot;]                     # weight, long regression
+delta &lt;- coef(lm(wt ~ am, data = mtcars))[&quot;am&quot;]   # slope of weight on am
+
+coef(fit_long)[&quot;am&quot;] + gamma * delta   # reproduces the short coefficient</code></pre>
+<pre><code>##       am 
+## 7.244939</code></pre>
+<pre class="r"><code>coef(fit_short)[&quot;am&quot;]</code></pre>
+<pre><code>##       am 
+## 7.244939</code></pre>
+<pre class="r"><code>tapply(mtcars$wt, mtcars$am, range)</code></pre>
+<pre><code>## $`0`
+## [1] 2.465 5.424
+## 
+## $`1`
+## [1] 1.513 3.570</code></pre>
+<pre class="r"><code># Cars inside the weight range where both groups are observed
+with(mtcars, table(am, in_overlap = wt &gt;= 2.465 &amp; wt &lt;= 3.570))</code></pre>
+<pre><code>##    in_overlap
+## am  FALSE TRUE
+##   0     8   11
+##   1     7    6</code></pre>
+<pre class="r"><code>c(
+  am_only        = coef(lm(mpg ~ am, data = mtcars))[&quot;am&quot;],
+  plus_wt        = coef(lm(mpg ~ am + wt, data = mtcars))[&quot;am&quot;],
+  plus_wt_hp     = coef(lm(mpg ~ am + wt + hp, data = mtcars))[&quot;am&quot;],
+  plus_wt_qsec   = coef(lm(mpg ~ am + wt + qsec, data = mtcars))[&quot;am&quot;],
+  plus_wt_hp_cyl = coef(lm(mpg ~ am + wt + hp + factor(cyl),
+                           data = mtcars))[&quot;am&quot;]
+)</code></pre>
+<pre><code>##        am_only.am        plus_wt.am     plus_wt_hp.am   plus_wt_qsec.am 
+##        7.24493927       -0.02361522        2.08371013        2.93583719 
+## plus_wt_hp_cyl.am 
+##        1.80921138</code></pre>
+</div>
 <div id="interactions-and-centering" class="section level2">
 <h2>Interactions and centering</h2>
 <pre class="r"><code>fit_interaction &lt;- lm(mpg ~ wt * am, data = mtcars)
@@ -1249,6 +1294,18 @@ summary(fit_interaction_centered)</code></pre>
 ## Residual standard error: 2.591 on 28 degrees of freedom
 ## Multiple R-squared:  0.833,  Adjusted R-squared:  0.8151 
 ## F-statistic: 46.57 on 3 and 28 DF,  p-value: 5.209e-11</code></pre>
+<p>With the interaction, the fitted manual-minus-automatic difference
+depends on weight; the additive model’s -0.024 hides that.</p>
+<pre class="r"><code>b &lt;- coef(fit_interaction)
+
+# Fitted manual-minus-automatic difference at a given weight
+gap_at &lt;- function(w) b[&quot;am&quot;] + b[&quot;wt:am&quot;] * w
+gap_at(c(2.5, 3.0, 3.5))</code></pre>
+<pre><code>## [1]  1.632521 -1.016659 -3.665839</code></pre>
+<pre class="r"><code># The weight at which the two fitted lines cross
+-b[&quot;am&quot;] / b[&quot;wt:am&quot;]</code></pre>
+<pre><code>##       am 
+## 2.808118</code></pre>
 </div>
 <div id="a-confidence-interval-when-a-confounder-is-omitted" class="section level2">
 <h2>A confidence interval when a confounder is omitted</h2>

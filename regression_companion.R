@@ -570,6 +570,32 @@ coef(fit_partial)["am_resid"]       # identical to the line above
 cor(mtcars$am, mtcars$wt)
 summary(lm(am ~ wt, data = mtcars))$r.squared
 
+# ---- ch3-sign-flip-decomposition ----
+fit_short <- lm(mpg ~ am, data = mtcars)
+fit_long <- lm(mpg ~ wt + am, data = mtcars)
+
+gamma <- coef(fit_long)["wt"]                     # weight, long regression
+delta <- coef(lm(wt ~ am, data = mtcars))["am"]   # slope of weight on am
+
+coef(fit_long)["am"] + gamma * delta   # reproduces the short coefficient
+coef(fit_short)["am"]
+
+# ---- ch3-sign-flip-support ----
+tapply(mtcars$wt, mtcars$am, range)
+
+# Cars inside the weight range where both groups are observed
+with(mtcars, table(am, in_overlap = wt >= 2.465 & wt <= 3.570))
+
+# ---- ch3-sign-flip-specifications ----
+c(
+  am_only        = coef(lm(mpg ~ am, data = mtcars))["am"],
+  plus_wt        = coef(lm(mpg ~ am + wt, data = mtcars))["am"],
+  plus_wt_hp     = coef(lm(mpg ~ am + wt + hp, data = mtcars))["am"],
+  plus_wt_qsec   = coef(lm(mpg ~ am + wt + qsec, data = mtcars))["am"],
+  plus_wt_hp_cyl = coef(lm(mpg ~ am + wt + hp + factor(cyl),
+                           data = mtcars))["am"]
+)
+
 # ---- ch3-interaction-centering ----
 fit_interaction <- lm(mpg ~ wt * am, data = mtcars)
 summary(fit_interaction)
@@ -583,6 +609,16 @@ fit_interaction_centered <- lm(
   data = mtcars_for_example
 )
 summary(fit_interaction_centered)
+
+# ---- ch3-interaction-gap-by-weight ----
+b <- coef(fit_interaction)
+
+# Fitted manual-minus-automatic difference at a given weight
+gap_at <- function(w) b["am"] + b["wt:am"] * w
+gap_at(c(2.5, 3.0, 3.5))
+
+# The weight at which the two fitted lines cross
+-b["am"] / b["wt:am"]
 
 # ---- ch3-omitted-confounder-coverage ----
 set.seed(11)
